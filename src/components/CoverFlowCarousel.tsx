@@ -181,21 +181,6 @@ export function CoverFlowCarousel({ photos, onUpload }: CoverFlowCarouselProps) 
         </button>
       </div>
 
-      {/* File Name Label */}
-      <div className="mt-8 text-center">
-        <AnimatePresence mode="wait">
-          <motion.p
-            key={currentIndex}
-            className="text-black uppercase tracking-widest text-sm border-2 border-black inline-block px-6 py-2 font-mono"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3 }}
-          >
-            {isCurrentPlaceholder ? 'INSERT_NEW_SLIDE' : photos[currentIndex].fileName}
-          </motion.p>
-        </AnimatePresence>
-      </div>
       <input
         type="file"
         ref={fileInputRef}
