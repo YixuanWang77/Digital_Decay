@@ -9,3 +9,4 @@
 
   Run `npm run dev` to start the development server.
   
+  Run `python face_counter.py` to start the face counter.
