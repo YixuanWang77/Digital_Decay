@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import p5 from 'p5';
 
 export type DecayLevel = 0 | 1 | 2 | 3;
@@ -100,14 +100,14 @@ function captureGraphicsImageData(g: p5.Graphics): ImageData | null {
   return null;
 }
 
-export const DecayingImage: React.FC<DecayingImageProps> = ({
+export function DecayingImage({
   id,
   src,
   className,
   isActive = false,
   decayLevel,
   resetNonce,
-}) => {
+}: DecayingImageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const decayLevelRef = useRef<DecayLevel>(decayLevel);
   const isActiveRef = useRef<boolean>(isActive);
@@ -596,4 +596,4 @@ export const DecayingImage: React.FC<DecayingImageProps> = ({
       <style>{` canvas { width: 100% !important; height: 100% !important; object-fit: cover; } `}</style>
     </div>
   );
-};
+}

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CoverFlowCarousel } from './components/CoverFlowCarousel';
 
 const basePhotos = [
@@ -70,7 +70,7 @@ function IconReset(props: { className?: string }) {
   );
 }
 
-/** Manual mode: pointer control */
+/** Manual mode: classic mouse pointer (Lucide-style outline). */
 function IconCursorManual(props: { className?: string }) {
   return (
     <svg
@@ -82,7 +82,7 @@ function IconCursorManual(props: { className?: string }) {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M5 3l11 9.5-4.5 1L9 20l-1-5.5L3 14Z" />
+      <path d="M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.333 2.106-6.352-6.352 2.104-6.333zm1.034 1.034l5.59 5.59 4.354-1.452L5.071 5.722z" />
     </svg>
   );
 }
@@ -136,7 +136,6 @@ function App() {
   };
 
   useEffect(() => {
-    // OFF = 自动监测模式：开始轮询本地 Python API
     if (!manualMode) {
       const tick = async () => {
         try {
@@ -163,12 +162,10 @@ function App() {
           const proposed = mapFaceCountToDecayLevel(faceCount);
           setDecayLevel((prev) => Math.max(prev, proposed) as 0 | 1 | 2 | 3);
         } catch (err) {
-          // API 未开启 / CORS / 网络断开：静默失败，避免崩溃
           if (err instanceof DOMException && err.name === 'AbortError') return;
         }
       };
 
-      // 立刻拉一次，再每秒拉取
       void tick();
       pollTimerRef.current = window.setInterval(() => void tick(), 1000);
 
@@ -182,7 +179,6 @@ function App() {
       };
     }
 
-    // ON = 手动模式：立刻停止轮询
     if (pollTimerRef.current !== null) {
       window.clearInterval(pollTimerRef.current);
       pollTimerRef.current = null;
@@ -215,17 +211,17 @@ function App() {
           />
 
           <div className="w-full max-w-7xl mx-auto px-8 mt-6 pb-8">
-            <div className="flex items-center justify-end gap-4">
+            <div className="flex items-center justify-end gap-8">
               <button
                 type="button"
                 aria-label="Level 1"
                 onClick={() => setLevel(1)}
                 disabled={!canManual}
-                className={`w-12 h-12 border-2 border-black flex items-center justify-center bg-neutral-200 transition-colors ${
-                  canManual ? 'enabled:hover:bg-black enabled:hover:text-white' : 'disabled:text-neutral-300'
-                }`}
+                className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center bg-neutral-200 transition-colors enabled:hover:bg-black enabled:hover:text-white disabled:text-neutral-300`}
               >
-                <IconSingleUser className={`w-6 h-6 ${!canManual ? 'text-neutral-300 opacity-70' : ''}`} />
+                <IconSingleUser
+                  className={`w-6 h-6 ${!canManual ? 'text-neutral-300 opacity-70' : ''}`}
+                />
               </button>
 
               <button
@@ -233,11 +229,11 @@ function App() {
                 aria-label="Level 2"
                 onClick={() => setLevel(2)}
                 disabled={!canManual}
-                className={`w-12 h-12 border-2 border-black flex items-center justify-center bg-white transition-colors ${
-                  canManual ? 'enabled:hover:bg-black enabled:hover:text-white' : 'disabled:text-neutral-300'
-                }`}
+                className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center bg-white transition-colors enabled:hover:bg-black enabled:hover:text-white disabled:text-neutral-300`}
               >
-                <IconTwoUsers className={`w-6 h-6 ${!canManual ? 'text-neutral-300 opacity-70' : ''}`} />
+                <IconTwoUsers
+                  className={`w-6 h-6 ${!canManual ? 'text-neutral-300 opacity-70' : ''}`}
+                />
               </button>
 
               <button
@@ -245,18 +241,18 @@ function App() {
                 aria-label="Level 3"
                 onClick={() => setLevel(3)}
                 disabled={!canManual}
-                className={`w-12 h-12 border-2 border-black flex items-center justify-center bg-white transition-colors ${
-                  canManual ? 'enabled:hover:bg-black enabled:hover:text-white' : 'disabled:text-neutral-300'
-                }`}
+                className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center bg-white transition-colors enabled:hover:bg-black enabled:hover:text-white disabled:text-neutral-300`}
               >
-                <IconThreeUsers className={`w-6 h-6 ${!canManual ? 'text-neutral-300 opacity-70' : ''}`} />
+                <IconThreeUsers
+                  className={`w-6 h-6 ${!canManual ? 'text-neutral-300 opacity-70' : ''}`}
+                />
               </button>
 
               <button
                 type="button"
                 aria-label="Reset current image to perfect state"
                 onClick={resetActive}
-                className="w-12 h-12 border-2 border-black bg-white hover:bg-black hover:text-white transition-colors flex items-center justify-center"
+                className="w-12 h-12 shrink-0 border-2 border-black bg-white hover:bg-black hover:text-white transition-colors flex items-center justify-center"
               >
                 <IconReset className="w-6 h-6" />
               </button>
@@ -269,7 +265,7 @@ function App() {
                     : 'Auto camera mode: decay is irreversible (eye)'
                 }
                 onClick={() => setManualMode((v) => !v)}
-                className={`w-12 h-12 border-2 border-black flex items-center justify-center transition-colors hover:bg-black hover:text-white ${
+                className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center transition-colors hover:bg-black hover:text-white ${
                   manualMode ? 'bg-white' : 'bg-neutral-200'
                 }`}
               >
