@@ -70,19 +70,20 @@ function IconReset(props: { className?: string }) {
   );
 }
 
-/** Manual mode: classic mouse pointer (Lucide-style outline). */
+/** Manual mode: classic mouse pointer */
 function IconCursorManual(props: { className?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"
-      className={props.className}
       fill="none"
       stroke="currentColor"
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
+      className={props.className}
     >
-      <path d="M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.333 2.106-6.352-6.352 2.104-6.333zm1.034 1.034l5.59 5.59 4.354-1.452L5.071 5.722z" />
+      <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
+      <path d="M13 13l6 6" />
     </svg>
   );
 }
@@ -199,9 +200,9 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      <main className="flex-1 flex items-center justify-center">
-        <div className="w-full">
+    <div className="min-h-screen bg-white flex flex-col overflow-hidden">
+      <main className="flex-1 flex items-center justify-center min-h-0">
+        <div className="w-full min-h-0 flex flex-col">
           <CoverFlowCarousel
             photos={photos}
             decayLevel={decayLevel}
@@ -217,7 +218,7 @@ function App() {
                 aria-label="Level 1"
                 onClick={() => setLevel(1)}
                 disabled={!canManual}
-                className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center bg-neutral-200 transition-colors enabled:hover:bg-black enabled:hover:text-white disabled:text-neutral-300`}
+                className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center bg-neutral-200 transition-colors disabled:text-neutral-300 ${canManual ? 'hover:bg-black hover:text-white' : ''}`}
               >
                 <IconSingleUser
                   className={`w-6 h-6 ${!canManual ? 'text-neutral-300 opacity-70' : ''}`}
@@ -229,7 +230,7 @@ function App() {
                 aria-label="Level 2"
                 onClick={() => setLevel(2)}
                 disabled={!canManual}
-                className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center bg-white transition-colors enabled:hover:bg-black enabled:hover:text-white disabled:text-neutral-300`}
+                className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center bg-white transition-colors disabled:text-neutral-300 ${canManual ? 'hover:bg-black hover:text-white' : ''}`}
               >
                 <IconTwoUsers
                   className={`w-6 h-6 ${!canManual ? 'text-neutral-300 opacity-70' : ''}`}
@@ -241,7 +242,7 @@ function App() {
                 aria-label="Level 3"
                 onClick={() => setLevel(3)}
                 disabled={!canManual}
-                className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center bg-white transition-colors enabled:hover:bg-black enabled:hover:text-white disabled:text-neutral-300`}
+                className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center bg-white transition-colors disabled:text-neutral-300 ${canManual ? 'hover:bg-black hover:text-white' : ''}`}
               >
                 <IconThreeUsers
                   className={`w-6 h-6 ${!canManual ? 'text-neutral-300 opacity-70' : ''}`}

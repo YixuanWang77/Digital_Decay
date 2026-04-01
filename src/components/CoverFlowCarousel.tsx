@@ -85,7 +85,7 @@ export function CoverFlowCarousel({
 
   return (
     <div className="w-full max-w-7xl mx-auto px-8">
-      <div className="relative h-[900px] flex items-center justify-center">
+      <div className="relative h-[75vh] min-h-[500px] w-full flex items-center justify-center">
         <motion.div
           key={`prev-${previousIndex}`}
           className="absolute left-0 z-[5] cursor-pointer"
