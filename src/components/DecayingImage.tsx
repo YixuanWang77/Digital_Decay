@@ -20,11 +20,51 @@ const TRANSITION_MS_DEFAULT = 1800;
 const L3_PAUSE_MS = 500;
 const L3_FADE_MS = 1600;
 
+type Phase = 'transition' | 'l3_pause' | 'l3_fade' | 'l3_dead' | 'settled';
+
 /** 边缘预览冻结：缓存每张图当前帧像素，避免继续渲染/计算。 */
 const pixelCache = new Map<string, ImageData>();
 
+/**
+ * Carousel 切换时中心位会卸载/重挂载，p5 实例被销毁。
+ * 按 id 保存 sketch 内部状态，重载后从断点继续（除非 resetNonce 已变）。
+ */
+const sketchResumeById = new Map<string, SketchSnapshot>();
+
+/** 供 cleanup 读取的最后一帧有效 sketch 快照（inactive 分支不写入）。 */
+const lastSketchSnapshotById = new Map<string, () => SketchSnapshot>();
+
+interface SketchSnapshot {
+  phase: Phase;
+  lastDecayLevel: DecayLevel | null;
+  mis: number;
+  loss: number;
+  noise: number;
+  art: number;
+  mis0: number;
+  loss0: number;
+  noise0: number;
+  art0: number;
+  mis1: number;
+  loss1: number;
+  noise1: number;
+  art1: number;
+  transDuration: number;
+  transTargetLevel: DecayLevel;
+  transElapsed: number;
+  l3PhaseElapsed: number;
+  /** l3 冻结画面（pause/fade）；仅从 graphics / canvas 在卸载或阶段切换时捕获 */
+  l3ImageData: ImageData | null;
+}
+
 function idSeed(id: string): number {
   return [...id].reduce((a, c) => a + c.charCodeAt(0), 0);
+}
+
+function copyImageData(src: ImageData): ImageData {
+  const copy = new ImageData(src.width, src.height);
+  copy.data.set(src.data);
+  return copy;
 }
 
 function targetsForLevel(level: DecayLevel): { mis: number; loss: number; noise: number; art: number } {
@@ -46,6 +86,20 @@ function transitionDurationMs(toLevel: DecayLevel): number {
   return toLevel === 0 ? TRANSITION_MS_LEVEL_0 : TRANSITION_MS_DEFAULT;
 }
 
+function captureGraphicsImageData(g: p5.Graphics): ImageData | null {
+  const c = g.elt as HTMLCanvasElement | undefined;
+  if (!c) return null;
+  const ctx = c.getContext('2d');
+  if (ctx && c.width > 0 && c.height > 0) {
+    try {
+      return ctx.getImageData(0, 0, c.width, c.height);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 export const DecayingImage: React.FC<DecayingImageProps> = ({
   id,
   src,
@@ -62,7 +116,6 @@ export const DecayingImage: React.FC<DecayingImageProps> = ({
 
   useEffect(() => {
     decayLevelRef.current = decayLevel;
-    // 只有当前处于中央的图片才响应档位变化并运行过渡
     if (isActiveRef.current) p5Ref.current?.loop();
   }, [decayLevel]);
 
@@ -70,7 +123,8 @@ export const DecayingImage: React.FC<DecayingImageProps> = ({
     if (resetNonceRef.current === resetNonce) return;
     resetNonceRef.current = resetNonce;
     pixelCache.delete(id);
-    // reset 发生时，允许中央图立刻重算一帧（回到 Level 0）
+    sketchResumeById.delete(id);
+    lastSketchSnapshotById.delete(id);
     if (isActiveRef.current) p5Ref.current?.loop();
   }, [resetNonce, id]);
 
@@ -82,7 +136,6 @@ export const DecayingImage: React.FC<DecayingImageProps> = ({
 
     const canvas = host.querySelector('canvas');
     if (!isActive) {
-      // 离开中央：立刻冻结为当前帧静态预览
       if (canvas instanceof HTMLCanvasElement) {
         const ctx = canvas.getContext('2d');
         if (ctx && canvas.width > 0 && canvas.height > 0) {
@@ -95,15 +148,12 @@ export const DecayingImage: React.FC<DecayingImageProps> = ({
       }
       inst.noLoop();
     } else {
-      // 回到中央：允许引擎继续/追上目标档位
       inst.loop();
     }
   }, [isActive, id]);
 
   useEffect(() => {
     if (!containerRef.current) return;
-
-    type Phase = 'transition' | 'l3_pause' | 'l3_fade' | 'l3_dead' | 'settled';
 
     const sketch = (p: p5) => {
       let mainCanvas: p5.Graphics;
@@ -131,10 +181,81 @@ export const DecayingImage: React.FC<DecayingImageProps> = ({
       let transDuration = TRANSITION_MS_DEFAULT;
       let transTargetLevel: DecayLevel = 0;
 
-      let l3Snapshot: ImageData | null = null;
+      /** Level 3 冻结帧：pause/fade 每帧只 blit 此 buffer + 可选暗角，避免全屏 putImageData */
+      let l3Frozen: p5.Graphics | null = null;
       let l3PhaseStart = 0;
 
       const seed = idSeed(id);
+
+      let pendingRestore: SketchSnapshot | null = sketchResumeById.get(id) ?? null;
+      if (pendingRestore) {
+        sketchResumeById.delete(id);
+      }
+
+      /** 仅在实例卸载时调用：拷贝 L3 像素以便跨挂载恢复。draw 循环内绝不 getImageData。 */
+      const snapshotForUnmount = (): SketchSnapshot => {
+        let l3Data: ImageData | null = null;
+        if ((phase === 'l3_pause' || phase === 'l3_fade') && l3Frozen) {
+          const raw = captureGraphicsImageData(l3Frozen);
+          if (raw) l3Data = copyImageData(raw);
+        }
+        return {
+          phase,
+          lastDecayLevel,
+          mis,
+          loss,
+          noise,
+          art,
+          mis0,
+          loss0,
+          noise0,
+          art0,
+          mis1,
+          loss1,
+          noise1,
+          art1,
+          transDuration,
+          transTargetLevel,
+          transElapsed:
+            phase === 'transition' ? Math.min(Math.max(0, p.millis() - transStart), transDuration) : 0,
+          l3PhaseElapsed:
+            phase === 'l3_pause' || phase === 'l3_fade'
+              ? Math.max(0, p.millis() - l3PhaseStart)
+              : 0,
+          l3ImageData: l3Data,
+        };
+      };
+
+      const applyRestore = (snap: SketchSnapshot) => {
+        phase = snap.phase;
+        lastDecayLevel = snap.lastDecayLevel;
+        mis = snap.mis;
+        loss = snap.loss;
+        noise = snap.noise;
+        art = snap.art;
+        mis0 = snap.mis0;
+        loss0 = snap.loss0;
+        noise0 = snap.noise0;
+        art0 = snap.art0;
+        mis1 = snap.mis1;
+        loss1 = snap.loss1;
+        noise1 = snap.noise1;
+        art1 = snap.art1;
+        transDuration = snap.transDuration;
+        transTargetLevel = snap.transTargetLevel;
+        transStart = p.millis() - snap.transElapsed;
+        l3Frozen?.remove();
+        l3Frozen = null;
+        if ((snap.phase === 'l3_pause' || snap.phase === 'l3_fade') && snap.l3ImageData) {
+          if (snap.l3ImageData.width === p.width && snap.l3ImageData.height === p.height) {
+            l3Frozen = p.createGraphics(p.width, p.height);
+            (l3Frozen as unknown as { pixelDensity: (n: number) => void }).pixelDensity(1);
+            const l3Ctx = l3Frozen.drawingContext as CanvasRenderingContext2D;
+            l3Ctx.putImageData(snap.l3ImageData, 0, 0);
+          }
+        }
+        l3PhaseStart = p.millis() - snap.l3PhaseElapsed;
+      };
 
       const blitCachedFrameIfAny = (): boolean => {
         const cached = pixelCache.get(id);
@@ -155,7 +276,20 @@ export const DecayingImage: React.FC<DecayingImageProps> = ({
         }
       };
 
+      const disposeL3Frozen = () => {
+        l3Frozen?.remove();
+        l3Frozen = null;
+      };
+
+      const buildL3FrozenFromMain = () => {
+        disposeL3Frozen();
+        l3Frozen = p.createGraphics(p.width, p.height);
+        (l3Frozen as unknown as { pixelDensity: (n: number) => void }).pixelDensity(1);
+        l3Frozen.image(mainCanvas, 0, 0);
+      };
+
       const startTransition = (toLevel: DecayLevel) => {
+        disposeL3Frozen();
         transTargetLevel = toLevel;
         transDuration = transitionDurationMs(toLevel);
         mis0 = mis;
@@ -169,7 +303,6 @@ export const DecayingImage: React.FC<DecayingImageProps> = ({
         art1 = t.art;
         transStart = p.millis();
         phase = 'transition';
-        l3Snapshot = null;
         p.loop();
       };
 
@@ -178,7 +311,7 @@ export const DecayingImage: React.FC<DecayingImageProps> = ({
         g.image(originalImg, 0, 0);
         g.noStroke();
         p.randomSeed(seed + levelForSeed * 999);
-        const tears = Math.floor(p.map(strength, 0, 1, 8, 360));
+        const tears = Math.floor(p.map(strength, 0, 1, 8, 200));
         for (let i = 0; i < tears; i++) {
           const y = p.random(g.height);
           const h = p.max(3, p.random(4, 38) * (0.35 + strength));
@@ -192,8 +325,8 @@ export const DecayingImage: React.FC<DecayingImageProps> = ({
         if (strength <= 0) return;
         g.noStroke();
         p.randomSeed(seed + levelForSeed * 999 + 17);
-        const count = Math.floor(strength * 400);
-        for (let i = 0; i < count; i++) {
+        const count150 = Math.min(220, Math.floor(strength * 150));
+        for (let i = 0; i < count150; i++) {
           const x = p.random(g.width);
           const y = p.random(g.height);
           const w = p.random(4, 16);
@@ -208,9 +341,10 @@ export const DecayingImage: React.FC<DecayingImageProps> = ({
         if (strength <= 0) return;
         g.noStroke();
         p.randomSeed(seed + levelForSeed * 999 + 29);
-        const n = Math.floor(p.map(strength, 0, 1, 6, 128));
+        const n = Math.floor(p.map(strength, 0, 1, 4, 52));
+        const blockSizes = [24, 32, 40, 56, 64];
         for (let i = 0; i < n; i++) {
-          const bSize = p.random([24, 32, 40, 56, 64]);
+          const bSize = blockSizes[Math.floor(p.random(blockSizes.length))]!;
           const gx = p.floor(p.random(g.width / bSize)) * bSize;
           const gy = p.floor(p.random(g.height / bSize)) * bSize;
           const sx = p.constrain(gx + p.random(-bSize * 1.5, bSize * 1.5), 0, g.width - bSize);
@@ -228,7 +362,7 @@ export const DecayingImage: React.FC<DecayingImageProps> = ({
         g.noStroke();
         p.randomSeed(seed + levelForSeed * 999 + 41);
         const area = g.width * g.height;
-        const dots = Math.floor(cover * area * 0.095);
+        const dots = Math.min(9000, Math.floor(cover * area * 0.036));
         for (let i = 0; i < dots; i++) {
           const x = p.floor(p.random(g.width));
           const y = p.floor(p.random(g.height));
@@ -271,13 +405,19 @@ export const DecayingImage: React.FC<DecayingImageProps> = ({
           mainCanvas = p.createGraphics(img.width, img.height);
           (mainCanvas as unknown as { pixelDensity: (n: number) => void }).pixelDensity(1);
           isLoaded = true;
-          lastDecayLevel = null;
-          phase = 'settled';
-          mis = 0;
-          loss = 0;
-          noise = 0;
-          art = 0;
-          // 初始只渲染一帧；是否继续由 isActive 决定
+
+          if (pendingRestore) {
+            applyRestore(pendingRestore);
+            pendingRestore = null;
+          } else {
+            lastDecayLevel = null;
+            phase = 'settled';
+            mis = 0;
+            loss = 0;
+            noise = 0;
+            art = 0;
+          }
+          lastSketchSnapshotById.set(id, snapshotForUnmount);
           p.loop();
         });
       };
@@ -287,7 +427,6 @@ export const DecayingImage: React.FC<DecayingImageProps> = ({
 
         const active = isActiveRef.current;
         if (!active) {
-          // 边缘预览：只显示已缓存的静态帧（或原图），并立刻停 loop
           if (!blitCachedFrameIfAny()) {
             p.image(originalImg, 0, 0);
             cacheCurrentFrame();
@@ -303,6 +442,7 @@ export const DecayingImage: React.FC<DecayingImageProps> = ({
           if (level === 0) {
             mis = loss = noise = art = 0;
             phase = 'settled';
+            disposeL3Frozen();
             p.image(originalImg, 0, 0);
             cacheCurrentFrame();
             p.noLoop();
@@ -325,7 +465,7 @@ export const DecayingImage: React.FC<DecayingImageProps> = ({
 
         const leaveL3 = level !== 3 && (phase === 'l3_pause' || phase === 'l3_fade' || phase === 'l3_dead');
         if (leaveL3) {
-          l3Snapshot = null;
+          disposeL3Frozen();
         }
 
         if (lastDecayLevel !== level) {
@@ -349,16 +489,7 @@ export const DecayingImage: React.FC<DecayingImageProps> = ({
             if (transTargetLevel === 3) {
               renderDecayToMain(mis, loss, noise, art, 3);
               p.image(mainCanvas, 0, 0);
-              try {
-                l3Snapshot = (p.drawingContext as CanvasRenderingContext2D).getImageData(
-                  0,
-                  0,
-                  p.width,
-                  p.height,
-                );
-              } catch {
-                l3Snapshot = null;
-              }
+              buildL3FrozenFromMain();
               phase = 'l3_pause';
               l3PhaseStart = p.millis();
             } else {
@@ -375,9 +506,8 @@ export const DecayingImage: React.FC<DecayingImageProps> = ({
         }
 
         if (phase === 'l3_pause') {
-          const ctx = p.drawingContext as CanvasRenderingContext2D;
-          if (l3Snapshot && l3Snapshot.width === p.width && l3Snapshot.height === p.height) {
-            ctx.putImageData(l3Snapshot, 0, 0);
+          if (l3Frozen) {
+            p.image(l3Frozen, 0, 0);
           } else {
             renderDecayToMain(mis, loss, noise, art, 3);
             p.image(mainCanvas, 0, 0);
@@ -390,9 +520,8 @@ export const DecayingImage: React.FC<DecayingImageProps> = ({
         }
 
         if (phase === 'l3_fade') {
-          const ctx = p.drawingContext as CanvasRenderingContext2D;
-          if (l3Snapshot && l3Snapshot.width === p.width && l3Snapshot.height === p.height) {
-            ctx.putImageData(l3Snapshot, 0, 0);
+          if (l3Frozen) {
+            p.image(l3Frozen, 0, 0);
           } else {
             p.background(0);
           }
@@ -402,6 +531,7 @@ export const DecayingImage: React.FC<DecayingImageProps> = ({
           p.rect(0, 0, p.width, p.height);
           if (ft >= 1) {
             phase = 'l3_dead';
+            disposeL3Frozen();
           }
           return;
         }
@@ -431,7 +561,16 @@ export const DecayingImage: React.FC<DecayingImageProps> = ({
 
     return () => {
       p5Ref.current = null;
-      // 卸载也确保留住当前帧，方便再次作为静态预览复用
+      const saver = lastSketchSnapshotById.get(id);
+      if (saver) {
+        try {
+          sketchResumeById.set(id, saver());
+        } catch {
+          /* ignore */
+        }
+        lastSketchSnapshotById.delete(id);
+      }
+
       const host = containerRef.current;
       const canvas = host?.querySelector('canvas');
       if (canvas instanceof HTMLCanvasElement) {
