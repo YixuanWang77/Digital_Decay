@@ -15,7 +15,7 @@ export interface DecayingImageProps {
 
 /** 性能与叙事节奏：拉长过渡，让破坏“慢慢升起来”。 */
 const TRANSITION_MS_LEVEL_0 = 260;
-const TRANSITION_MS_DEFAULT = 1800;
+const TRANSITION_MS_DEFAULT = 3000;
 
 const L3_PAUSE_MS = 500;
 const L3_FADE_MS = 1600;
