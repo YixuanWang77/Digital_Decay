@@ -13,48 +13,37 @@ export interface DecayingImageProps {
   resetNonce: number;
 }
 
-/** 性能与叙事节奏：拉长过渡，让破坏“慢慢升起来”。 */
 const TRANSITION_MS_LEVEL_0 = 260;
-const TRANSITION_MS_DEFAULT = 3000;
+const TRANSITION_MS_PER_DECAY_STEP = 10_000;
 
-const L3_PAUSE_MS = 500;
-const L3_FADE_MS = 1600;
+const MAX_RENDER_DIM = 1000;
 
-type Phase = 'transition' | 'l3_pause' | 'l3_fade' | 'l3_dead' | 'settled';
+type Phase = 'transition' | 'settled';
 
-/** 边缘预览冻结：缓存每张图当前帧像素，避免继续渲染/计算。 */
-const pixelCache = new Map<string, ImageData>();
-
-/**
- * Carousel 切换时中心位会卸载/重挂载，p5 实例被销毁。
- * 按 id 保存 sketch 内部状态，重载后从断点继续（除非 resetNonce 已变）。
- */
 const sketchResumeById = new Map<string, SketchSnapshot>();
 
-/** 供 cleanup 读取的最后一帧有效 sketch 快照（inactive 分支不写入）。 */
 const lastSketchSnapshotById = new Map<string, () => SketchSnapshot>();
 
 interface SketchSnapshot {
   phase: Phase;
   lastDecayLevel: DecayLevel | null;
-  mis: number;
-  loss: number;
-  noise: number;
-  art: number;
-  mis0: number;
-  loss0: number;
-  noise0: number;
-  art0: number;
-  mis1: number;
-  loss1: number;
-  noise1: number;
-  art1: number;
+  shifting: number;
+  smearing: number;
+  grit: number;
+  rgbSplit: number;
+  shifting0: number;
+  smearing0: number;
+  grit0: number;
+  rgbSplit0: number;
+  shifting1: number;
+  smearing1: number;
+  grit1: number;
+  rgbSplit1: number;
   transDuration: number;
   transTargetLevel: DecayLevel;
+  transFromLevel: DecayLevel;
   transElapsed: number;
-  l3PhaseElapsed: number;
-  /** l3 冻结画面（pause/fade）；仅从 graphics / canvas 在卸载或阶段切换时捕获 */
-  l3ImageData: ImageData | null;
+  displayImageData: ImageData | null;
 }
 
 function idSeed(id: string): number {
@@ -67,37 +56,83 @@ function copyImageData(src: ImageData): ImageData {
   return copy;
 }
 
-function targetsForLevel(level: DecayLevel): { mis: number; loss: number; noise: number; art: number } {
+/**
+ * Shifting / smear / grit: 0..1 style intensities at high tier (caps below).
+ * rgbSplit: fraction of renderWidth (max 0.10).
+ */
+function targetsForLevel(level: DecayLevel): {
+  shifting: number;
+  smearing: number;
+  grit: number;
+  rgbSplit: number;
+} {
   switch (level) {
     case 0:
-      return { mis: 0, loss: 0, noise: 0, art: 0 };
+      return { shifting: 0, smearing: 0, grit: 0, rgbSplit: 0 };
     case 1:
-      return { mis: 0.3, loss: 0, noise: 0, art: 0 };
+      return { shifting: 0.15, smearing: 0.05, grit: 0.02, rgbSplit: 0.02 };
     case 2:
-      return { mis: 0.6, loss: 0.3, noise: 0, art: 0 };
+      return { shifting: 0.3, smearing: 0.15, grit: 0.05, rgbSplit: 0.05 };
     case 3:
-      return { mis: 0.8, loss: 0.3, noise: 0.8, art: 0.8 };
+      return { shifting: 0.6, smearing: 0.3, grit: 0.08, rgbSplit: 0.08 };
     default:
-      return { mis: 0, loss: 0, noise: 0, art: 0 };
+      return { shifting: 0, smearing: 0, grit: 0, rgbSplit: 0 };
   }
 }
 
 function transitionDurationMs(toLevel: DecayLevel): number {
-  return toLevel === 0 ? TRANSITION_MS_LEVEL_0 : TRANSITION_MS_DEFAULT;
+  return toLevel === 0 ? TRANSITION_MS_LEVEL_0 : TRANSITION_MS_PER_DECAY_STEP;
 }
 
-function captureGraphicsImageData(g: p5.Graphics): ImageData | null {
-  const c = g.elt as HTMLCanvasElement | undefined;
-  if (!c) return null;
-  const ctx = c.getContext('2d');
-  if (ctx && c.width > 0 && c.height > 0) {
-    try {
-      return ctx.getImageData(0, 0, c.width, c.height);
-    } catch {
-      return null;
-    }
+function computeRenderSize(imgW: number, imgH: number): { rw: number; rh: number } {
+  const m = Math.max(imgW, imgH);
+  if (m <= MAX_RENDER_DIM) return { rw: imgW, rh: imgH };
+  const s = MAX_RENDER_DIM / m;
+  return { rw: Math.round(imgW * s), rh: Math.round(imgH * s) };
+}
+
+function legacyToSnapshotFields(s: Record<string, unknown>): Partial<SketchSnapshot> | null {
+  if (typeof s.mis !== 'number') return null;
+  return {
+    shifting: Math.min(0.6, (s.mis as number) * 0.75),
+    smearing: Math.min(0.3, ((s.loss as number) ?? 0) * 0.4 + ((s.art as number) ?? 0) * 0.2),
+    grit: Math.min(0.08, ((s.noise as number) ?? 0) * 0.06),
+    rgbSplit: Math.min(0.1, ((s.noise as number) ?? 0) * 0.05),
+    shifting0: (s.mis0 as number) ?? 0,
+    smearing0: (s.loss0 as number) ?? 0,
+    grit0: (s.noise0 as number) ?? 0,
+    rgbSplit0: (s.noise0 as number) ?? 0,
+    shifting1: (s.mis1 as number) ?? 0,
+    smearing1: (s.loss1 as number) ?? 0,
+    grit1: (s.noise1 as number) ?? 0,
+    rgbSplit1: (s.noise1 as number) ?? 0,
+  };
+}
+
+function normalizeSnapshot(snap: SketchSnapshot | Record<string, unknown>): SketchSnapshot {
+  const L = legacyToSnapshotFields(snap as Record<string, unknown>);
+  const s = snap as SketchSnapshot & { grit?: number };
+  if (L && typeof s.shifting !== 'number') {
+    return {
+      ...s,
+      shifting: L.shifting ?? 0,
+      smearing: L.smearing ?? 0,
+      grit: L.grit ?? 0,
+      rgbSplit: L.rgbSplit ?? 0,
+      shifting0: L.shifting0 ?? 0,
+      smearing0: L.smearing0 ?? 0,
+      grit0: L.grit0 ?? 0,
+      rgbSplit0: L.rgbSplit0 ?? 0,
+      shifting1: L.shifting1 ?? 0,
+      smearing1: L.smearing1 ?? 0,
+      grit1: L.grit1 ?? 0,
+      rgbSplit1: L.rgbSplit1 ?? 0,
+    } as SketchSnapshot;
   }
-  return null;
+  if (typeof s.grit !== 'number') {
+    return { ...s, grit: 0, grit0: s.grit0 ?? 0, grit1: s.grit1 ?? 0 } as SketchSnapshot;
+  }
+  return s as SketchSnapshot;
 }
 
 export function DecayingImage({
@@ -113,324 +148,360 @@ export function DecayingImage({
   const isActiveRef = useRef<boolean>(isActive);
   const p5Ref = useRef<p5 | null>(null);
   const resetNonceRef = useRef<number>(resetNonce);
+  const snapshotSaverRef = useRef<(() => SketchSnapshot) | null>(null);
 
+  /** Single sync: refs + loop only while active (avoids decay advancing on inactive instances). */
   useEffect(() => {
+    isActiveRef.current = isActive;
     decayLevelRef.current = decayLevel;
-    if (isActiveRef.current) p5Ref.current?.loop();
-  }, [decayLevel]);
+    const inst = p5Ref.current;
+    if (!inst) return;
+    if (isActive) inst.loop();
+    else inst.noLoop();
+  }, [isActive, decayLevel]);
 
   useEffect(() => {
     if (resetNonceRef.current === resetNonce) return;
     resetNonceRef.current = resetNonce;
-    pixelCache.delete(id);
     sketchResumeById.delete(id);
     lastSketchSnapshotById.delete(id);
     if (isActiveRef.current) p5Ref.current?.loop();
   }, [resetNonce, id]);
 
   useEffect(() => {
-    isActiveRef.current = isActive;
-    const inst = p5Ref.current;
-    const host = containerRef.current;
-    if (!inst || !host) return;
-
-    const canvas = host.querySelector('canvas');
-    if (!isActive) {
-      if (canvas instanceof HTMLCanvasElement) {
-        const ctx = canvas.getContext('2d');
-        if (ctx && canvas.width > 0 && canvas.height > 0) {
-          try {
-            pixelCache.set(id, ctx.getImageData(0, 0, canvas.width, canvas.height));
-          } catch {
-            /* ignore */
-          }
-        }
-      }
-      inst.noLoop();
-    } else {
-      inst.loop();
-    }
-  }, [isActive, id]);
-
-  useEffect(() => {
     if (!containerRef.current) return;
 
     const sketch = (p: p5) => {
+      let renderW = 1;
+      let renderH = 1;
       let mainCanvas: p5.Graphics;
+      let baseScaled: p5.Graphics;
+      let tempShift: p5.Graphics;
+      let smearGfx: p5.Graphics;
       let originalImg: p5.Image;
       let isLoaded = false;
 
       let phase: Phase = 'settled';
       let lastDecayLevel: DecayLevel | null = null;
 
-      let mis = 0;
-      let loss = 0;
-      let noise = 0;
-      let art = 0;
+      let shifting = 0;
+      let smearing = 0;
+      let grit = 0;
+      let rgbSplit = 0;
 
-      let mis0 = 0;
-      let loss0 = 0;
-      let noise0 = 0;
-      let art0 = 0;
-      let mis1 = 0;
-      let loss1 = 0;
-      let noise1 = 0;
-      let art1 = 0;
+      let shifting0 = 0;
+      let smearing0 = 0;
+      let grit0 = 0;
+      let rgbSplit0 = 0;
+      let shifting1 = 0;
+      let smearing1 = 0;
+      let grit1 = 0;
+      let rgbSplit1 = 0;
 
       let transStart = 0;
-      let transDuration = TRANSITION_MS_DEFAULT;
+      let transDuration = TRANSITION_MS_PER_DECAY_STEP;
       let transTargetLevel: DecayLevel = 0;
+      let transFromLevel: DecayLevel = 0;
 
-      /** Level 3 冻结帧：pause/fade 每帧只 blit 此 buffer + 可选暗角，避免全屏 putImageData */
-      let l3Frozen: p5.Graphics | null = null;
-      let l3PhaseStart = 0;
+      let hasPaintedFrame = false;
+      let restoredBlitPending = false;
 
       const seed = idSeed(id);
 
-      let pendingRestore: SketchSnapshot | null = sketchResumeById.get(id) ?? null;
-      if (pendingRestore) {
-        sketchResumeById.delete(id);
+      let pendingRestore: SketchSnapshot | null = null;
+      const rawPending = sketchResumeById.get(id);
+      if (rawPending) {
+        // Do NOT delete from map immediately to allow multiple clones to read it
+        pendingRestore = normalizeSnapshot(rawPending as unknown as Record<string, unknown>);
+      } else {
+        // SHIELD: If no saved snapshot, fetch directly from the currently active exiting clone!
+        const liveSaver = lastSketchSnapshotById.get(id);
+        if (liveSaver) {
+          pendingRestore = normalizeSnapshot(liveSaver() as unknown as Record<string, unknown>);
+        }
       }
 
-      /** 仅在实例卸载时调用：拷贝 L3 像素以便跨挂载恢复。draw 循环内绝不 getImageData。 */
       const snapshotForUnmount = (): SketchSnapshot => {
-        let l3Data: ImageData | null = null;
-        if ((phase === 'l3_pause' || phase === 'l3_fade') && l3Frozen) {
-          const raw = captureGraphicsImageData(l3Frozen);
-          if (raw) l3Data = copyImageData(raw);
+        let displayData: ImageData | null = null;
+        if (p.width > 0 && p.height > 0) {
+          try {
+            const ctx = p.drawingContext as CanvasRenderingContext2D;
+            displayData = copyImageData(ctx.getImageData(0, 0, p.width, p.height));
+          } catch {
+            /* ignore */
+          }
         }
         return {
           phase,
           lastDecayLevel,
-          mis,
-          loss,
-          noise,
-          art,
-          mis0,
-          loss0,
-          noise0,
-          art0,
-          mis1,
-          loss1,
-          noise1,
-          art1,
+          shifting,
+          smearing,
+          grit,
+          rgbSplit,
+          shifting0,
+          smearing0,
+          grit0,
+          rgbSplit0,
+          shifting1,
+          smearing1,
+          grit1,
+          rgbSplit1,
           transDuration,
           transTargetLevel,
+          transFromLevel,
           transElapsed:
             phase === 'transition' ? Math.min(Math.max(0, p.millis() - transStart), transDuration) : 0,
-          l3PhaseElapsed:
-            phase === 'l3_pause' || phase === 'l3_fade'
-              ? Math.max(0, p.millis() - l3PhaseStart)
-              : 0,
-          l3ImageData: l3Data,
+          displayImageData: displayData,
         };
       };
 
-      const applyRestore = (snap: SketchSnapshot) => {
+      const applyRestore = (snapIn: SketchSnapshot) => {
+        const snap = normalizeSnapshot(snapIn);
         phase = snap.phase;
         lastDecayLevel = snap.lastDecayLevel;
-        mis = snap.mis;
-        loss = snap.loss;
-        noise = snap.noise;
-        art = snap.art;
-        mis0 = snap.mis0;
-        loss0 = snap.loss0;
-        noise0 = snap.noise0;
-        art0 = snap.art0;
-        mis1 = snap.mis1;
-        loss1 = snap.loss1;
-        noise1 = snap.noise1;
-        art1 = snap.art1;
+        shifting = snap.shifting;
+        smearing = snap.smearing;
+        grit = snap.grit;
+        rgbSplit = snap.rgbSplit;
+        shifting0 = snap.shifting0;
+        smearing0 = snap.smearing0;
+        grit0 = snap.grit0;
+        rgbSplit0 = snap.rgbSplit0;
+        shifting1 = snap.shifting1;
+        smearing1 = snap.smearing1;
+        grit1 = snap.grit1;
+        rgbSplit1 = snap.rgbSplit1;
         transDuration = snap.transDuration;
         transTargetLevel = snap.transTargetLevel;
+        transFromLevel = snap.transFromLevel;
         transStart = p.millis() - snap.transElapsed;
-        l3Frozen?.remove();
-        l3Frozen = null;
-        if ((snap.phase === 'l3_pause' || snap.phase === 'l3_fade') && snap.l3ImageData) {
-          if (snap.l3ImageData.width === p.width && snap.l3ImageData.height === p.height) {
-            l3Frozen = p.createGraphics(p.width, p.height);
-            (l3Frozen as unknown as { pixelDensity: (n: number) => void }).pixelDensity(1);
-            const l3Ctx = l3Frozen.drawingContext as CanvasRenderingContext2D;
-            l3Ctx.putImageData(snap.l3ImageData, 0, 0);
-          }
+        hasPaintedFrame = false;
+        restoredBlitPending = false;
+      };
+
+      const compositeRgbSplitToScreen = (src: p5.Graphics, rgbFrac: number) => {
+        const px = rgbFrac * renderW;
+        if (px <= 0) {
+          p.image(src, 0, 0);
+          return;
         }
-        l3PhaseStart = p.millis() - snap.l3PhaseElapsed;
+        p.background(0);
+        p.blendMode(p.SCREEN);
+        p.tint(255, 0, 0);
+        p.image(src, -px, 0);
+        p.tint(0, 255, 0);
+        p.image(src, 0, 0);
+        p.tint(0, 0, 255);
+        p.image(src, px, 0);
+        p.noTint();
+        p.blendMode(p.BLEND);
       };
 
-      const blitCachedFrameIfAny = (): boolean => {
-        const cached = pixelCache.get(id);
-        if (!cached) return false;
-        if (cached.width !== p.width || cached.height !== p.height) return false;
-        const ctx = p.drawingContext as CanvasRenderingContext2D;
-        ctx.putImageData(cached, 0, 0);
-        return true;
-      };
-
-      const cacheCurrentFrame = () => {
-        const ctx = p.drawingContext as CanvasRenderingContext2D;
-        try {
-          const data = ctx.getImageData(0, 0, p.width, p.height);
-          pixelCache.set(id, data);
-        } catch {
-          /* ignore */
+      const applyHorizontalShifting = (g: p5.Graphics, shiftStr: number, levelForSeed: DecayLevel) => {
+        if (shiftStr <= 0) {
+          g.image(baseScaled, 0, 0);
+          return;
         }
-      };
-
-      const disposeL3Frozen = () => {
-        l3Frozen?.remove();
-        l3Frozen = null;
-      };
-
-      const buildL3FrozenFromMain = () => {
-        disposeL3Frozen();
-        l3Frozen = p.createGraphics(p.width, p.height);
-        (l3Frozen as unknown as { pixelDensity: (n: number) => void }).pixelDensity(1);
-        l3Frozen.image(mainCanvas, 0, 0);
-      };
-
-      const startTransition = (toLevel: DecayLevel) => {
-        disposeL3Frozen();
-        transTargetLevel = toLevel;
-        transDuration = transitionDurationMs(toLevel);
-        mis0 = mis;
-        loss0 = loss;
-        noise0 = noise;
-        art0 = art;
-        const t = targetsForLevel(toLevel);
-        mis1 = t.mis;
-        loss1 = t.loss;
-        noise1 = t.noise;
-        art1 = t.art;
-        transStart = p.millis();
-        phase = 'transition';
-        p.loop();
-      };
-
-      const applyMisalignment = (g: p5.Graphics, strength: number, levelForSeed: DecayLevel) => {
-        if (strength <= 0) return;
-        g.image(originalImg, 0, 0);
-        g.noStroke();
-        p.randomSeed(seed + levelForSeed * 999);
-        const tears = Math.floor(p.map(strength, 0, 1, 8, 200));
-        for (let i = 0; i < tears; i++) {
-          const y = p.random(g.height);
-          const h = p.max(3, p.random(4, 38) * (0.35 + strength));
-          const offset = p.random(-1, 1) * 130 * strength;
-          g.copy(originalImg, 0, y, g.width, h, offset, y, g.width, h);
+        tempShift.image(baseScaled, 0, 0);
+        g.image(baseScaled, 0, 0);
+        p.randomSeed(seed + levelForSeed * 900);
+        const bands = Math.floor(p.constrain(p.map(shiftStr, 0, 0.6, 8, 18), 8, 18));
+        const bandH = renderH / bands;
+        for (let i = 0; i < bands; i++) {
+          const y = Math.floor(i * bandH);
+          const h = i === bands - 1 ? renderH - y : Math.max(1, Math.floor(bandH));
+          const maxOff = shiftStr * renderW;
+          const ox = Math.round(p.random(-1, 1) * maxOff);
+          g.copy(tempShift, 0, y, renderW, h, ox, y, renderW, h);
         }
         p.randomSeed(p.millis());
       };
 
-      const applyPartialLoss = (g: p5.Graphics, strength: number, levelForSeed: DecayLevel) => {
-        if (strength <= 0) return;
+      /** Layer 2: 2×2 / 5×5 chunks, H / V / sheared stretch, neon SCREEN/ADD. */
+      const applyMultiSmear = (g: p5.Graphics, smearCov: number, levelForSeed: DecayLevel) => {
+        if (smearCov <= 0.0001) return;
+        smearGfx.clear();
+        p.randomSeed(seed + levelForSeed * 601);
+        const n = Math.min(85, Math.max(1, Math.floor(smearCov * 220)));
+        for (let k = 0; k < n; k++) {
+          const cell = p.random() < 0.55 ? 2 : 5;
+          const sx = Math.floor(p.random(0, Math.max(1, renderW - cell)));
+          const sy = Math.floor(p.random(0, Math.max(1, renderH - cell)));
+          const chip = baseScaled.get(sx, sy, cell, cell);
+          const mode = Math.floor(p.random(3));
+          const destX = p.random(0, Math.max(1, renderW - cell));
+          const destY = p.random(0, Math.max(1, renderH - cell));
+          smearGfx.push();
+          smearGfx.translate(destX, destY);
+          smearGfx.blendMode(p.ADD);
+          smearGfx.tint(p.random(100, 255), p.random(100, 255), p.random(100, 255), p.random(45, 130));
+          if (mode === 0) {
+            const dw = renderW * p.random(0.45, 1.35);
+            smearGfx.image(chip, 0, 0, dw, cell);
+          } else if (mode === 1) {
+            const dh = renderH * p.random(0.25, 0.75);
+            smearGfx.image(chip, 0, 0, cell, dh);
+          } else {
+            smearGfx.rotate(p.random(-0.35, 0.35));
+            const dw = renderW * p.random(0.5, 1.4);
+            const dh = cell * p.random(2, 6);
+            smearGfx.image(chip, 0, 0, dw, dh);
+          }
+          smearGfx.pop();
+        }
+        smearGfx.noTint();
+        smearGfx.blendMode(p.BLEND);
+        g.blendMode(p.SCREEN);
+        g.image(smearGfx, 0, 0);
+        g.blendMode(p.BLEND);
+        p.randomSeed(p.millis());
+      };
+
+      /** Layer 3: fine grain + tiny micro-loss (no large black blocks). */
+      const applyMicroGrit = (g: p5.Graphics, gritStr: number, levelForSeed: DecayLevel) => {
+        if (gritStr <= 0.0001) return;
+        p.randomSeed(seed + levelForSeed * 503);
+        const area = renderW * renderH;
+        const snowDots = Math.min(8000, Math.floor(gritStr * area * 0.05));
         g.noStroke();
-        p.randomSeed(seed + levelForSeed * 999 + 17);
-        const count150 = Math.min(220, Math.floor(strength * 150));
-        for (let i = 0; i < count150; i++) {
-          const x = p.random(g.width);
-          const y = p.random(g.height);
-          const w = p.random(4, 16);
-          const h = p.random(3, 12);
-          g.fill(10, 10, 10, p.random(190, 255));
+        for (let i = 0; i < snowDots; i++) {
+          const x = Math.floor(p.random(renderW));
+          const y = Math.floor(p.random(renderH));
+          const bright = p.random() < 0.5 ? p.random(200, 255) : p.random(0, 45);
+          g.fill(bright, bright, bright, p.random(12, 42));
+          g.rect(x, y, 1, 1);
+        }
+        const microLoss = Math.min(1200, Math.floor(gritStr * 900));
+        for (let j = 0; j < microLoss; j++) {
+          const x = Math.floor(p.random(renderW - 1));
+          const y = Math.floor(p.random(renderH - 1));
+          const w = p.random() < 0.65 ? 1 : 2;
+          const h = p.random() < 0.65 ? 1 : 2;
+          g.fill(p.random(55, 105), p.random(55, 105), p.random(55, 105), p.random(18, 55));
           g.rect(x, y, w, h);
         }
         p.randomSeed(p.millis());
       };
 
-      const applyCompressionArtifacts = (g: p5.Graphics, strength: number, levelForSeed: DecayLevel) => {
-        if (strength <= 0) return;
-        g.noStroke();
-        p.randomSeed(seed + levelForSeed * 999 + 29);
-        const n = Math.floor(p.map(strength, 0, 1, 4, 52));
-        const blockSizes = [24, 32, 40, 56, 64];
-        for (let i = 0; i < n; i++) {
-          const bSize = blockSizes[Math.floor(p.random(blockSizes.length))]!;
-          const gx = p.floor(p.random(g.width / bSize)) * bSize;
-          const gy = p.floor(p.random(g.height / bSize)) * bSize;
-          const sx = p.constrain(gx + p.random(-bSize * 1.5, bSize * 1.5), 0, g.width - bSize);
-          const sy = p.constrain(gy + p.random(-bSize * 1.5, bSize * 1.5), 0, g.height - bSize);
-          g.copy(originalImg, sx, sy, bSize, bSize, gx, gy, bSize, bSize);
-          const m = p.random(85, 135);
-          g.fill(m, m, m, 95);
-          g.rect(gx, gy, bSize, bSize);
-        }
-        p.randomSeed(p.millis());
+      const renderPipelineToMain = (shiftStr: number, smearCov: number, gritStr: number, levelForSeed: DecayLevel) => {
+        applyHorizontalShifting(mainCanvas, shiftStr, levelForSeed);
+        applyMultiSmear(mainCanvas, smearCov, levelForSeed);
+        applyMicroGrit(mainCanvas, gritStr, levelForSeed);
       };
 
-      const applyNoise = (g: p5.Graphics, cover: number, levelForSeed: DecayLevel) => {
-        if (cover <= 0) return;
-        g.noStroke();
-        p.randomSeed(seed + levelForSeed * 999 + 41);
-        const area = g.width * g.height;
-        const dots = Math.min(9000, Math.floor(cover * area * 0.036));
-        for (let i = 0; i < dots; i++) {
-          const x = p.floor(p.random(g.width));
-          const y = p.floor(p.random(g.height));
-          const s = p.random(1, 3);
-          const v = p.random() < 0.52 ? p.random(0, 40) : p.random(188, 255);
-          g.fill(v, v, v, p.random(40, 190));
-          g.rect(x, y, s, s * p.random(0.85, 1.35));
-        }
-        p.randomSeed(p.millis());
-      };
-
-      const renderDecayToMain = (
-        m: number,
-        l: number,
-        n: number,
-        a: number,
-        levelForSeed: DecayLevel,
-      ) => {
-        mainCanvas.image(originalImg, 0, 0);
-        if (m > 0) applyMisalignment(mainCanvas, m, levelForSeed);
-        if (l > 0) applyPartialLoss(mainCanvas, l, levelForSeed);
-        if (a > 0) applyCompressionArtifacts(mainCanvas, a, levelForSeed);
-        if (n > 0) applyNoise(mainCanvas, n, levelForSeed);
-      };
-
-      const drawSettledFrame = (levelForSeed: DecayLevel) => {
-        if (mis <= 0 && loss <= 0 && noise <= 0 && art <= 0) {
-          p.image(originalImg, 0, 0);
+      const paintInactiveOnce = () => {
+        const seedLevel = lastDecayLevel ?? decayLevelRef.current;
+        if (shifting <= 0 && smearing <= 0 && grit <= 0 && rgbSplit <= 0) {
+          p.image(originalImg, 0, 0, renderW, renderH);
         } else {
-          renderDecayToMain(mis, loss, noise, art, levelForSeed);
-          p.image(mainCanvas, 0, 0);
+          renderPipelineToMain(shifting, smearing, grit, seedLevel);
+          compositeRgbSplitToScreen(mainCanvas, rgbSplit);
         }
+      };
+
+      const startTransition = (fromLevel: DecayLevel, toLevel: DecayLevel) => {
+        transFromLevel = fromLevel;
+        transTargetLevel = toLevel;
+        transDuration = transitionDurationMs(toLevel);
+        shifting0 = shifting;
+        smearing0 = smearing;
+        grit0 = grit;
+        rgbSplit0 = rgbSplit;
+        const tgt = targetsForLevel(toLevel);
+        shifting1 = tgt.shifting;
+        smearing1 = tgt.smearing;
+        grit1 = tgt.grit;
+        rgbSplit1 = tgt.rgbSplit;
+        transStart = p.millis();
+        phase = 'transition';
+        p.loop();
       };
 
       p.setup = () => {
+        snapshotSaverRef.current = snapshotForUnmount;
         p.loadImage(src, (img) => {
           originalImg = img;
+          const { rw, rh } = computeRenderSize(img.width, img.height);
+          renderW = rw;
+          renderH = rh;
+
           p.pixelDensity(1);
-          p.createCanvas(img.width, img.height);
-          mainCanvas = p.createGraphics(img.width, img.height);
-          (mainCanvas as unknown as { pixelDensity: (n: number) => void }).pixelDensity(1);
+          p.createCanvas(renderW, renderH);
+
+          const pd = (gr: p5.Graphics) => (gr as unknown as { pixelDensity: (n: number) => void }).pixelDensity(1);
+
+          mainCanvas = p.createGraphics(renderW, renderH);
+          pd(mainCanvas);
+          baseScaled = p.createGraphics(renderW, renderH);
+          pd(baseScaled);
+          baseScaled.image(originalImg, 0, 0, renderW, renderH);
+
+          tempShift = p.createGraphics(renderW, renderH);
+          pd(tempShift);
+          smearGfx = p.createGraphics(renderW, renderH);
+          pd(smearGfx);
+
           isLoaded = true;
 
           if (pendingRestore) {
-            applyRestore(pendingRestore);
+            const snapRestore = pendingRestore;
             pendingRestore = null;
+            applyRestore(snapRestore);
+            if (
+              snapRestore.displayImageData &&
+              snapRestore.displayImageData.width === p.width &&
+              snapRestore.displayImageData.height === p.height
+            ) {
+              try {
+                const ctx = p.drawingContext as CanvasRenderingContext2D;
+                ctx.putImageData(snapRestore.displayImageData, 0, 0);
+                hasPaintedFrame = true;
+                if (snapRestore.phase === 'settled') {
+                  restoredBlitPending = true;
+                }
+              } catch {
+                /* ignore */
+              }
+            }
           } else {
             lastDecayLevel = null;
             phase = 'settled';
-            mis = 0;
-            loss = 0;
-            noise = 0;
-            art = 0;
+            shifting = 0;
+            smearing = 0;
+            grit = 0;
+            rgbSplit = 0;
           }
-          lastSketchSnapshotById.set(id, snapshotForUnmount);
-          p.loop();
+
+          // SHIELD: Only register this instance's saver globally if it's active, or if no one else has.
+          if (isActiveRef.current || !lastSketchSnapshotById.has(id)) {
+            lastSketchSnapshotById.set(id, snapshotForUnmount);
+          }
+
+          if (isActiveRef.current) {
+            p.loop();
+          } else {
+            p.noLoop();
+            if (!hasPaintedFrame) p.redraw();
+          }
         });
       };
 
       p.draw = () => {
-        if (!isLoaded || !mainCanvas) return;
+        if (!isLoaded || !mainCanvas || !baseScaled) return;
 
         const active = isActiveRef.current;
+
         if (!active) {
-          if (!blitCachedFrameIfAny()) {
-            p.image(originalImg, 0, 0);
-            cacheCurrentFrame();
-          }
+          p.noLoop();
+          if (hasPaintedFrame) return;
+          paintInactiveOnce();
+          hasPaintedFrame = true;
+          return;
+        }
+
+        if (restoredBlitPending && phase === 'settled') {
+          restoredBlitPending = false;
+          hasPaintedFrame = true;
           p.noLoop();
           return;
         }
@@ -439,118 +510,68 @@ export function DecayingImage({
 
         if (lastDecayLevel === null) {
           lastDecayLevel = level;
+          transFromLevel = 0;
           if (level === 0) {
-            mis = loss = noise = art = 0;
+            shifting = smearing = grit = rgbSplit = 0;
             phase = 'settled';
-            disposeL3Frozen();
-            p.image(originalImg, 0, 0);
-            cacheCurrentFrame();
+            p.image(originalImg, 0, 0, renderW, renderH);
+            hasPaintedFrame = true;
             p.noLoop();
             return;
           }
-          mis0 = 0;
-          loss0 = 0;
-          noise0 = 0;
-          art0 = 0;
-          const t = targetsForLevel(level);
-          mis1 = t.mis;
-          loss1 = t.loss;
-          noise1 = t.noise;
-          art1 = t.art;
+          shifting0 = 0;
+          smearing0 = 0;
+          grit0 = 0;
+          rgbSplit0 = 0;
+          const tgt = targetsForLevel(level);
+          shifting1 = tgt.shifting;
+          smearing1 = tgt.smearing;
+          grit1 = tgt.grit;
+          rgbSplit1 = tgt.rgbSplit;
           transTargetLevel = level;
           transDuration = transitionDurationMs(level);
           transStart = p.millis();
           phase = 'transition';
         }
 
-        const leaveL3 = level !== 3 && (phase === 'l3_pause' || phase === 'l3_fade' || phase === 'l3_dead');
-        if (leaveL3) {
-          disposeL3Frozen();
-        }
-
         if (lastDecayLevel !== level) {
-          startTransition(level);
+          startTransition(lastDecayLevel, level);
           lastDecayLevel = level;
         }
 
         if (phase === 'transition') {
           const elapsed = p.millis() - transStart;
           const t = p.constrain(elapsed / transDuration, 0, 1);
-          mis = p.lerp(mis0, mis1, t);
-          loss = p.lerp(loss0, loss1, t);
-          noise = p.lerp(noise0, noise1, t);
-          art = p.lerp(art0, art1, t);
+          shifting = p.lerp(shifting0, shifting1, t);
+          smearing = p.lerp(smearing0, smearing1, t);
+          grit = p.lerp(grit0, grit1, t);
+          rgbSplit = p.lerp(rgbSplit0, rgbSplit1, t);
 
           if (t >= 1) {
-            mis = mis1;
-            loss = loss1;
-            noise = noise1;
-            art = art1;
-            if (transTargetLevel === 3) {
-              renderDecayToMain(mis, loss, noise, art, 3);
-              p.image(mainCanvas, 0, 0);
-              buildL3FrozenFromMain();
-              phase = 'l3_pause';
-              l3PhaseStart = p.millis();
-            } else {
-              drawSettledFrame(transTargetLevel);
-              phase = 'settled';
-              cacheCurrentFrame();
-              p.noLoop();
-            }
+            shifting = shifting1;
+            smearing = smearing1;
+            grit = grit1;
+            rgbSplit = rgbSplit1;
+            renderPipelineToMain(shifting, smearing, grit, transTargetLevel);
+            compositeRgbSplitToScreen(mainCanvas, rgbSplit);
+            phase = 'settled';
+            hasPaintedFrame = true;
+            p.noLoop();
           } else {
-            renderDecayToMain(mis, loss, noise, art, transTargetLevel);
-            p.image(mainCanvas, 0, 0);
-          }
-          return;
-        }
-
-        if (phase === 'l3_pause') {
-          if (l3Frozen) {
-            p.image(l3Frozen, 0, 0);
-          } else {
-            renderDecayToMain(mis, loss, noise, art, 3);
-            p.image(mainCanvas, 0, 0);
-          }
-          if (p.millis() - l3PhaseStart >= L3_PAUSE_MS) {
-            phase = 'l3_fade';
-            l3PhaseStart = p.millis();
-          }
-          return;
-        }
-
-        if (phase === 'l3_fade') {
-          if (l3Frozen) {
-            p.image(l3Frozen, 0, 0);
-          } else {
-            p.background(0);
-          }
-          const ft = p.constrain((p.millis() - l3PhaseStart) / L3_FADE_MS, 0, 1);
-          p.noStroke();
-          p.fill(0, ft * 255);
-          p.rect(0, 0, p.width, p.height);
-          if (ft >= 1) {
-            phase = 'l3_dead';
-            disposeL3Frozen();
-          }
-          return;
-        }
-
-        if (phase === 'l3_dead') {
-          p.background(8, 8, 8);
-          p.textAlign(p.CENTER, p.CENTER);
-          p.textFont('monospace');
-          p.textSize(24);
-          p.fill(200, 30, 30);
-          if (p.frameCount % 40 < 28) {
-            p.text('[ 0 BYTES_DATA LOST ]', p.width / 2, p.height / 2);
+            renderPipelineToMain(shifting, smearing, grit, transTargetLevel);
+            compositeRgbSplitToScreen(mainCanvas, rgbSplit);
           }
           return;
         }
 
         if (phase === 'settled') {
-          drawSettledFrame(level);
-          cacheCurrentFrame();
+          if (shifting <= 0 && smearing <= 0 && grit <= 0 && rgbSplit <= 0) {
+            p.image(originalImg, 0, 0, renderW, renderH);
+          } else {
+            renderPipelineToMain(shifting, smearing, grit, level);
+            compositeRgbSplitToScreen(mainCanvas, rgbSplit);
+          }
+          hasPaintedFrame = true;
           p.noLoop();
         }
       };
@@ -561,28 +582,24 @@ export function DecayingImage({
 
     return () => {
       p5Ref.current = null;
-      const saver = lastSketchSnapshotById.get(id);
+      const saver = snapshotSaverRef.current ?? lastSketchSnapshotById.get(id);
       if (saver) {
         try {
-          sketchResumeById.set(id, saver());
+          const snap = saver();
+          // THE SHIELD: Only save if this instance is actively decaying OR already holds a broken state.
+          // This prevents inactive 0-level clones from wiping out valid memory.
+          if (isActiveRef.current || snap.shifting > 0 || (snap.lastDecayLevel ?? 0) > 0) {
+            sketchResumeById.set(id, snap);
+          }
         } catch {
           /* ignore */
         }
-        lastSketchSnapshotById.delete(id);
-      }
-
-      const host = containerRef.current;
-      const canvas = host?.querySelector('canvas');
-      if (canvas instanceof HTMLCanvasElement) {
-        const ctx = canvas.getContext('2d');
-        if (ctx && canvas.width > 0 && canvas.height > 0) {
-          try {
-            pixelCache.set(id, ctx.getImageData(0, 0, canvas.width, canvas.height));
-          } catch {
-            /* ignore */
-          }
+        // Prevent deleting the function if a new instance of the same ID just registered it
+        if (lastSketchSnapshotById.get(id) === saver) {
+          lastSketchSnapshotById.delete(id);
         }
       }
+
       instance.remove();
     };
   }, [src, id]);

@@ -11,7 +11,7 @@ interface Photo {
 
 interface CoverFlowCarouselProps {
   photos: Photo[];
-  decayLevel: 0 | 1 | 2 | 3;
+  decayLevels: Record<string, 0 | 1 | 2 | 3>;
   currentIndex: number;
   onChangeIndex: (nextIndex: number) => void;
   resetNonceById: Record<string, number | undefined>;
@@ -30,7 +30,7 @@ const frameSmall = (landscape: boolean) =>
 
 export function CoverFlowCarousel({
   photos,
-  decayLevel,
+  decayLevels,
   currentIndex,
   onChangeIndex,
   resetNonceById,
@@ -63,9 +63,9 @@ export function CoverFlowCarousel({
           id={photo.id}
           src={photo.url}
           alt={photo.fileName}
-          className="w-full h-full object-cover grayscale"
+          className="w-full h-full object-cover"
           isActive={index === currentIndex}
-          decayLevel={decayLevel}
+          decayLevel={decayLevels[photo.id] ?? 0}
           resetNonce={resetNonceById[photo.id] ?? 0}
         />
       </div>

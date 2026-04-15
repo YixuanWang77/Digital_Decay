@@ -1,32 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CoverFlowCarousel } from './components/CoverFlowCarousel';
 
+import photo01 from '../Sources/Photo 01.jpeg';
+import photo02 from '../Sources/Photo 02.jpeg';
+import photo03 from '../Sources/Photo 03.jpeg';
+import photo04 from '../Sources/Photo 04.jpeg';
+import photo05 from '../Sources/Photo 05.jpeg';
+import photo06 from '../Sources/Photo 06.jpeg';
+import photo07 from '../Sources/Photo 07.jpeg';
+import photo08 from '../Sources/Photo 08.jpeg';
+import photo09 from '../Sources/Photo 09.jpeg';
+
 const basePhotos = [
-  {
-    url: 'https://images.unsplash.com/photo-1607699265032-3eafa2806ae6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhcmNoaXRlY3R1cmUlMjBtaW5pbWFsJTIwYmxhY2slMjB3aGl0ZXxlbnwxfHx8fDE3NzA1OTkzOTV8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-    fileName: 'ARCH_001.jpg',
-    orientation: 'portrait' as const,
-  },
-  {
-    url: 'https://images.unsplash.com/photo-1595411425732-e69c1abe2763?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGdlb21ldHJpYyUyMHBhdHRlcm58ZW58MXx8fHwxNzcwNTEwOTM5fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-    fileName: 'GEOMETRIC_002.jpg',
-    orientation: 'portrait' as const,
-  },
-  {
-    url: 'https://images.unsplash.com/photo-1673460244101-f80f7d9d9d9c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtaW5pbWFsJTIwbGFuZHNjYXBlJTIwbW9ub2Nocm9tZXxlbnwxfHx8fDE3NzA1OTkzOTZ8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-    fileName: 'LANDSCAPE_003.jpg',
-    orientation: 'portrait' as const,
-  },
-  {
-    url: 'https://images.unsplash.com/photo-1769283979195-d418a41ae2ec?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxicnV0YWxpc3QlMjBidWlsZGluZyUyMGNvbmNyZXRlfGVufDF8fHx8MTc3MDU5OTM5Nnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-    fileName: 'BRUTALIST_004.jpg',
-    orientation: 'portrait' as const,
-  },
-  {
-    url: 'https://images.unsplash.com/photo-1705321963943-de94bb3f0dd3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwaW50ZXJpb3IlMjBkZXNpZ258ZW58MXx8fHwxNzcwNTk4NzYxfDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-    fileName: 'INTERIOR_005.jpg',
-    orientation: 'portrait' as const,
-  },
+  { url: photo01, fileName: 'Photo 01.jpeg', orientation: 'portrait' as const },
+  { url: photo02, fileName: 'Photo 02.jpeg', orientation: 'portrait' as const },
+  { url: photo03, fileName: 'Photo 03.jpeg', orientation: 'portrait' as const },
+  { url: photo04, fileName: 'Photo 04.jpeg', orientation: 'portrait' as const },
+  { url: photo05, fileName: 'Photo 05.jpeg', orientation: 'portrait' as const },
+  { url: photo06, fileName: 'Photo 06.jpeg', orientation: 'portrait' as const },
+  { url: photo07, fileName: 'Photo 07.jpeg', orientation: 'portrait' as const },
+  { url: photo08, fileName: 'Photo 08.jpeg', orientation: 'portrait' as const },
+  { url: photo09, fileName: 'Photo 09.jpeg', orientation: 'portrait' as const },
 ];
 
 function IconSingleUser(props: { className?: string }) {
@@ -119,12 +113,14 @@ function App() {
   );
 
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [decayLevel, setDecayLevel] = useState<0 | 1 | 2 | 3>(0);
+  const [decayLevels, setDecayLevels] = useState<Record<string, 0 | 1 | 2 | 3>>({});
   const [manualMode, setManualMode] = useState(true);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const [resetNonceById, setResetNonceById] = useState<Record<string, number>>({});
 
   const activePhotoId = photos[currentIndex]?.id;
+  const currentDecayLevel = activePhotoId ? (decayLevels[activePhotoId] ?? 0) : 0;
   const canManual = manualMode;
 
   const pollTimerRef = useRef<number | null>(null);
@@ -161,7 +157,13 @@ function App() {
                 : NaN;
 
           const proposed = mapFaceCountToDecayLevel(faceCount);
-          setDecayLevel((prev) => Math.max(prev, proposed) as 0 | 1 | 2 | 3);
+          if (!activePhotoId) return;
+          setDecayLevels((prev) => {
+            const existing = prev[activePhotoId] ?? 0;
+            const next = Math.max(existing, proposed) as 0 | 1 | 2 | 3;
+            if (next === existing) return prev;
+            return { ...prev, [activePhotoId]: next };
+          });
         } catch (err) {
           if (err instanceof DOMException && err.name === 'AbortError') return;
         }
@@ -186,100 +188,184 @@ function App() {
     }
     abortRef.current?.abort();
     abortRef.current = null;
-  }, [manualMode]);
+  }, [manualMode, activePhotoId]);
 
   const setLevel = (level: 0 | 1 | 2 | 3) => {
     if (!canManual) return;
-    setDecayLevel(level);
+    if (!activePhotoId) return;
+    setDecayLevels((prev) => ({ ...prev, [activePhotoId]: level }));
   };
 
   const resetActive = () => {
     if (!activePhotoId) return;
-    setDecayLevel(0);
+    setDecayLevels((prev) => ({ ...prev, [activePhotoId]: 0 }));
     setResetNonceById((prev) => ({ ...prev, [activePhotoId]: (prev[activePhotoId] ?? 0) + 1 }));
   };
 
+  const navItems = ['Gallery (Homepage)', 'Concept / Narrative', 'Art & Production', 'Technical Development', 'About'];
+
   return (
-    <div className="min-h-screen bg-white flex flex-col overflow-hidden">
-      <main className="flex-1 flex items-center justify-center min-h-0">
-        <div className="w-full min-h-0 flex flex-col">
-          <CoverFlowCarousel
-            photos={photos}
-            decayLevel={decayLevel}
-            currentIndex={currentIndex}
-            onChangeIndex={setCurrentIndex}
-            resetNonceById={resetNonceById}
-          />
+    <div className="min-h-screen bg-white text-black overflow-x-hidden">
+      <div className="relative min-h-screen">
+        
+        {/* 1. Fixed Sidebar (Pure inline styles to guarantee width/position) */}
+        <aside style={{
+          position: 'fixed',
+          top: 0,
+          bottom: 0,
+          left: 0,
+          width: '60px',
+          zIndex: 40,
+          backgroundColor: 'rgba(255,255,255,0.95)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <button
+            type="button"
+            onClick={() => setIsMenuOpen((v) => !v)}
+            aria-label="Toggle index menu"
+            className="w-10 rounded-sm text-neutral-900 transition-all duration-500 hover:bg-neutral-100"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <span
+              className="text-[0.75rem] tracking-[0.35em] uppercase font-semibold"
+              style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', display: 'inline-block' }}
+            >
+              Index
+            </span>
+          </button>
+        </aside>
 
-          <div className="w-full max-w-7xl mx-auto px-8 mt-6 pb-8">
-            <div className="flex items-center justify-end gap-8">
-              <button
-                type="button"
-                aria-label="Level 1"
-                onClick={() => setLevel(1)}
-                disabled={!canManual}
-                className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center bg-neutral-200 transition-colors disabled:text-neutral-300 ${canManual ? 'hover:bg-black hover:text-white' : ''}`}
-              >
-                <IconSingleUser
-                  className={`w-6 h-6 ${!canManual ? 'text-neutral-300 opacity-70' : ''}`}
+        {/* 2. Slide-out Menu (No borders, seamless) */}
+        <nav
+          style={{
+            position: 'fixed',
+            top: 0,
+            bottom: 0,
+            left: '60px',
+            width: '320px',
+            zIndex: 30,
+            backgroundColor: 'rgba(255,255,255,0.95)',
+            backdropFilter: 'blur(24px)',
+            padding: '3.5rem 2.5rem',
+            transition: 'all 0.5s cubic-bezier(0.16,1,0.3,1)',
+            transform: isMenuOpen ? 'translateX(0)' : 'translateX(-100%)',
+            opacity: isMenuOpen ? 1 : 0,
+            pointerEvents: isMenuOpen ? 'auto' : 'none',
+          }}
+          aria-hidden={!isMenuOpen}
+        >
+          <ul className="flex h-full flex-col justify-center gap-7">
+            {navItems.map((item) => (
+              <li key={item}>
+                <button
+                  type="button"
+                  className="text-left text-2xl font-bold tracking-tight text-black/85 transition-colors duration-300 hover:text-black"
+                >
+                  {item}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        {/* 3. Main Content & Apple-style Blur */}
+        <main
+          style={{
+            marginLeft: '60px',
+            width: 'calc(100vw - 60px)',
+            minHeight: '100vh',
+            position: 'relative',
+            zIndex: 10,
+          }}
+        >
+          {/* The Blur Wrapper applies filter dynamically */}
+          <div
+            style={{
+              minHeight: '100vh',
+              transition: 'filter 0.5s cubic-bezier(0.16,1,0.3,1)',
+              filter: isMenuOpen ? 'blur(12px) brightness(0.8)' : 'blur(0px) brightness(1)',
+              pointerEvents: isMenuOpen ? 'none' : 'auto',
+            }}
+          >
+            <div className="flex min-h-screen items-center justify-center">
+              <div className="w-full min-h-0 flex flex-col">
+                <CoverFlowCarousel
+                  photos={photos}
+                  decayLevels={decayLevels}
+                  currentIndex={currentIndex}
+                  onChangeIndex={setCurrentIndex}
+                  resetNonceById={resetNonceById}
                 />
-              </button>
 
-              <button
-                type="button"
-                aria-label="Level 2"
-                onClick={() => setLevel(2)}
-                disabled={!canManual}
-                className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center bg-white transition-colors disabled:text-neutral-300 ${canManual ? 'hover:bg-black hover:text-white' : ''}`}
-              >
-                <IconTwoUsers
-                  className={`w-6 h-6 ${!canManual ? 'text-neutral-300 opacity-70' : ''}`}
-                />
-              </button>
+                <div className="w-full max-w-7xl mx-auto px-8 mt-6 pb-8">
+                  <div className="flex items-center justify-end gap-8">
+                    <button
+                      type="button"
+                      aria-label="Level 1"
+                      onClick={() => setLevel(1)}
+                      disabled={!canManual}
+                      className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center bg-neutral-200 transition-colors disabled:text-neutral-300 ${canManual ? 'hover:bg-black hover:text-white' : ''}`}
+                    >
+                      <IconSingleUser className={`w-6 h-6 ${!canManual ? 'text-neutral-300 opacity-70' : ''}`} />
+                    </button>
 
-              <button
-                type="button"
-                aria-label="Level 3"
-                onClick={() => setLevel(3)}
-                disabled={!canManual}
-                className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center bg-white transition-colors disabled:text-neutral-300 ${canManual ? 'hover:bg-black hover:text-white' : ''}`}
-              >
-                <IconThreeUsers
-                  className={`w-6 h-6 ${!canManual ? 'text-neutral-300 opacity-70' : ''}`}
-                />
-              </button>
+                    <button
+                      type="button"
+                      aria-label="Level 2"
+                      onClick={() => setLevel(2)}
+                      disabled={!canManual}
+                      className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center bg-white transition-colors disabled:text-neutral-300 ${canManual ? 'hover:bg-black hover:text-white' : ''}`}
+                    >
+                      <IconTwoUsers className={`w-6 h-6 ${!canManual ? 'text-neutral-300 opacity-70' : ''}`} />
+                    </button>
 
-              <button
-                type="button"
-                aria-label="Reset current image to perfect state"
-                onClick={resetActive}
-                className="w-12 h-12 shrink-0 border-2 border-black bg-white hover:bg-black hover:text-white transition-colors flex items-center justify-center"
-              >
-                <IconReset className="w-6 h-6" />
-              </button>
+                    <button
+                      type="button"
+                      aria-label="Level 3"
+                      onClick={() => setLevel(3)}
+                      disabled={!canManual}
+                      className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center bg-white transition-colors disabled:text-neutral-300 ${canManual ? 'hover:bg-black hover:text-white' : ''}`}
+                    >
+                      <IconThreeUsers className={`w-6 h-6 ${!canManual ? 'text-neutral-300 opacity-70' : ''}`} />
+                    </button>
 
-              <button
-                type="button"
-                aria-label={
-                  manualMode
-                    ? 'Manual mode: use level buttons (cursor)'
-                    : 'Auto camera mode: decay is irreversible (eye)'
-                }
-                onClick={() => setManualMode((v) => !v)}
-                className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center transition-colors hover:bg-black hover:text-white ${
-                  manualMode ? 'bg-white' : 'bg-neutral-200'
-                }`}
-              >
-                {manualMode ? (
-                  <IconCursorManual className="w-6 h-6" />
-                ) : (
-                  <IconEyeAuto className="w-6 h-6" />
-                )}
-              </button>
+                    <button
+                      type="button"
+                      aria-label="Reset current image to perfect state"
+                      onClick={resetActive}
+                      className="w-12 h-12 shrink-0 border-2 border-black bg-white hover:bg-black hover:text-white transition-colors flex items-center justify-center"
+                    >
+                      <IconReset className="w-6 h-6" />
+                    </button>
+
+                    <button
+                      type="button"
+                      aria-label={
+                        manualMode
+                          ? 'Manual mode: use level buttons (cursor)'
+                          : 'Auto camera mode: decay is irreversible (eye)'
+                      }
+                      onClick={() => setManualMode((v) => !v)}
+                      className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center transition-colors hover:bg-black hover:text-white ${
+                        manualMode ? 'bg-white' : 'bg-neutral-200'
+                      }`}
+                    >
+                      {manualMode ? (
+                        <IconCursorManual className="w-6 h-6" />
+                      ) : (
+                        <IconEyeAuto className="w-6 h-6" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
