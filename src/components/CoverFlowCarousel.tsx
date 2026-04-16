@@ -105,8 +105,8 @@ export function CoverFlowCarousel({
       <div
         className="relative w-full flex items-center justify-center"
         style={{
-          minHeight: `${activeLargeSize.height}px`,
-          height: '75vh',
+          minHeight: `${activeLargeSize.height + 100}px`,
+          height: 'auto',
         }}
       >
         <motion.div

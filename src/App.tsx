@@ -373,13 +373,10 @@ function App() {
                   ) : (
                     <motion.div
                       key="detail"
-                      className="w-full grid"
+                      className="w-full flex flex-col items-center justify-center"
                       style={{
                         width: '100%',
                         minHeight: '100vh',
-                        height: '100dvh',
-                        placeItems: 'center',
-                        alignContent: 'center',
                       }}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
