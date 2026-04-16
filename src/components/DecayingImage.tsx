@@ -198,7 +198,7 @@ export function DecayingImage({
       let grit1 = 0;
       let rgbSplit1 = 0;
 
-      let transStart = 0;
+      let currentTransElapsed = 0;
       let transDuration = TRANSITION_MS_PER_DECAY_STEP;
       let transTargetLevel: DecayLevel = 0;
       let transFromLevel: DecayLevel = 0;
@@ -250,7 +250,7 @@ export function DecayingImage({
           transTargetLevel,
           transFromLevel,
           transElapsed:
-            phase === 'transition' ? Math.min(Math.max(0, p.millis() - transStart), transDuration) : 0,
+            phase === 'transition' ? Math.min(Math.max(0, currentTransElapsed), transDuration) : 0,
           displayImageData: displayData,
         };
       };
@@ -274,7 +274,7 @@ export function DecayingImage({
         transDuration = snap.transDuration;
         transTargetLevel = snap.transTargetLevel;
         transFromLevel = snap.transFromLevel;
-        transStart = p.millis() - snap.transElapsed;
+        currentTransElapsed = snap.transElapsed;
         hasPaintedFrame = false;
         restoredBlitPending = false;
       };
@@ -412,7 +412,7 @@ export function DecayingImage({
         smearing1 = tgt.smearing;
         grit1 = tgt.grit;
         rgbSplit1 = tgt.rgbSplit;
-        transStart = p.millis();
+        currentTransElapsed = 0;
         phase = 'transition';
         p.loop();
       };
@@ -530,7 +530,7 @@ export function DecayingImage({
           rgbSplit1 = tgt.rgbSplit;
           transTargetLevel = level;
           transDuration = transitionDurationMs(level);
-          transStart = p.millis();
+          currentTransElapsed = 0;
           phase = 'transition';
         }
 
@@ -540,8 +540,8 @@ export function DecayingImage({
         }
 
         if (phase === 'transition') {
-          const elapsed = p.millis() - transStart;
-          const t = p.constrain(elapsed / transDuration, 0, 1);
+          currentTransElapsed += p.deltaTime;
+          const t = p.constrain(currentTransElapsed / transDuration, 0, 1);
           shifting = p.lerp(shifting0, shifting1, t);
           smearing = p.lerp(smearing0, smearing1, t);
           grit = p.lerp(grit0, grit1, t);
