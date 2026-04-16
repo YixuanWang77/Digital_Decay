@@ -9,7 +9,7 @@ import photo03 from '../Sources/Photo 03.jpeg';
 import photo04 from '../Sources/Photo 04.jpeg';
 import photo05 from '../Sources/Photo 05.jpeg';
 import photo06 from '../Sources/Photo 06.jpeg';
-import photo07 from '../Sources/Photo 07.jpeg';
+import photo07 from '../Sources/Photo 07.jpg';
 import photo08 from '../Sources/Photo 08.jpeg';
 import photo09 from '../Sources/Photo 09.jpeg';
 
@@ -20,7 +20,7 @@ const basePhotos = [
   { url: photo04, fileName: 'Photo 04.jpeg', orientation: 'portrait' as const },
   { url: photo05, fileName: 'Photo 05.jpeg', orientation: 'portrait' as const },
   { url: photo06, fileName: 'Photo 06.jpeg', orientation: 'portrait' as const },
-  { url: photo07, fileName: 'Photo 07.jpeg', orientation: 'portrait' as const },
+  { url: photo07, fileName: 'Photo 07.jpg', orientation: 'portrait' as const },
   { url: photo08, fileName: 'Photo 08.jpeg', orientation: 'portrait' as const },
   { url: photo09, fileName: 'Photo 09.jpeg', orientation: 'portrait' as const },
 ];
