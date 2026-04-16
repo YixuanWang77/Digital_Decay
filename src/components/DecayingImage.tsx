@@ -222,15 +222,6 @@ export function DecayingImage({
       }
 
       const snapshotForUnmount = (): SketchSnapshot => {
-        let displayData: ImageData | null = null;
-        if (p.width > 0 && p.height > 0) {
-          try {
-            const ctx = p.drawingContext as CanvasRenderingContext2D;
-            displayData = copyImageData(ctx.getImageData(0, 0, p.width, p.height));
-          } catch {
-            /* ignore */
-          }
-        }
         return {
           phase,
           lastDecayLevel,
@@ -251,7 +242,7 @@ export function DecayingImage({
           transFromLevel,
           transElapsed:
             phase === 'transition' ? Math.min(Math.max(0, currentTransElapsed), transDuration) : 0,
-          displayImageData: displayData,
+          displayImageData: null,
         };
       };
 
@@ -417,6 +408,13 @@ export function DecayingImage({
         p.loop();
       };
 
+      (p as unknown as { cleanupBuffers: () => void }).cleanupBuffers = () => {
+        if (mainCanvas) mainCanvas.remove();
+        if (baseScaled) baseScaled.remove();
+        if (tempShift) tempShift.remove();
+        if (smearGfx) smearGfx.remove();
+      };
+
       p.setup = () => {
         snapshotSaverRef.current = snapshotForUnmount;
         p.loadImage(src, (img) => {
@@ -447,22 +445,6 @@ export function DecayingImage({
             const snapRestore = pendingRestore;
             pendingRestore = null;
             applyRestore(snapRestore);
-            if (
-              snapRestore.displayImageData &&
-              snapRestore.displayImageData.width === p.width &&
-              snapRestore.displayImageData.height === p.height
-            ) {
-              try {
-                const ctx = p.drawingContext as CanvasRenderingContext2D;
-                ctx.putImageData(snapRestore.displayImageData, 0, 0);
-                hasPaintedFrame = true;
-                if (snapRestore.phase === 'settled') {
-                  restoredBlitPending = true;
-                }
-              } catch {
-                /* ignore */
-              }
-            }
           } else {
             lastDecayLevel = null;
             phase = 'settled';
@@ -600,6 +582,10 @@ export function DecayingImage({
         }
       }
 
+      const inst = instance as unknown as { cleanupBuffers?: () => void };
+      if (typeof inst.cleanupBuffers === 'function') {
+        inst.cleanupBuffers();
+      }
       instance.remove();
     };
   }, [src, id]);
