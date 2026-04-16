@@ -317,7 +317,10 @@ function App() {
           style={{
             marginLeft: '60px',
             width: 'calc(100vw - 60px)',
-            minHeight: '100vh',
+            minHeight: viewMode === 'detail' ? undefined : '100vh',
+            height: viewMode === 'detail' ? '100dvh' : undefined,
+            maxHeight: viewMode === 'detail' ? '100dvh' : undefined,
+            overflow: viewMode === 'detail' ? 'hidden' : undefined,
             position: 'relative',
             zIndex: 10,
           }}
@@ -325,19 +328,34 @@ function App() {
           {/* The Blur Wrapper applies filter dynamically */}
           <div
             style={{
-              minHeight: '100vh',
+              minHeight: viewMode === 'detail' ? 0 : '100vh',
+              height: viewMode === 'detail' ? '100%' : undefined,
+              maxHeight: viewMode === 'detail' ? '100%' : undefined,
+              overflow: viewMode === 'detail' ? 'hidden' : undefined,
               transition: 'filter 0.5s cubic-bezier(0.16,1,0.3,1)',
               filter: isMenuOpen ? 'blur(12px) brightness(0.8)' : 'blur(0px) brightness(1)',
               pointerEvents: isMenuOpen ? 'none' : 'auto',
             }}
           >
-            <div style={{ display: 'block', width: '100%', minHeight: '100vh', boxSizing: 'border-box' }}>
+            <div
+              style={{
+                display: 'block',
+                width: '100%',
+                minHeight: viewMode === 'detail' ? 0 : '100vh',
+                height: viewMode === 'detail' ? '100%' : undefined,
+                maxHeight: viewMode === 'detail' ? '100%' : undefined,
+                overflow: viewMode === 'detail' ? 'hidden' : undefined,
+                boxSizing: 'border-box',
+              }}
+            >
               <div
                 style={{
                   display: 'grid',
                   gridTemplateColumns: '1fr',
                   gridTemplateRows: '1fr',
                   width: '100%',
+                  height: viewMode === 'detail' ? '100%' : undefined,
+                  minHeight: viewMode === 'detail' ? 0 : undefined,
                   boxSizing: 'border-box',
                 }}
               >
@@ -363,12 +381,10 @@ function App() {
                   {viewMode === 'detail' && (
                     <motion.div
                       key="detail"
-                      className="w-full flex flex-col items-center justify-center"
+                      className="w-full flex h-full min-h-0 flex-col items-stretch bg-white"
                       style={{
                         gridArea: '1 / 1 / 2 / 2',
                         width: '100%',
-                        minHeight: '100vh',
-                        backgroundColor: 'white',
                         zIndex: 10,
                       }}
                       initial={{ opacity: 0 }}
@@ -376,11 +392,8 @@ function App() {
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
                     >
-                      <div
-                        className="w-full max-w-7xl mx-auto px-8 flex flex-col gap-8 justify-center"
-                        style={{ flex: '0 0 auto' }}
-                      >
-                        <div className="w-full flex justify-end">
+                      <div className="flex h-full min-h-0 w-full max-w-7xl flex-col gap-8 mx-auto px-8">
+                        <div className="shrink-0 w-full flex justify-end">
                           <button
                             type="button"
                             onClick={() => {
@@ -393,22 +406,26 @@ function App() {
                           </button>
                         </div>
 
-                        <CoverFlowCarousel
-                          photos={photos}
-                          decayLevels={decayLevels}
-                          currentIndex={currentIndex}
-                          selectedLayoutId={selectedId}
-                          detailEntryNonce={detailEntryNonce}
-                          onChangeIndex={(nextIndex: number) => {
-                            setCurrentIndex(nextIndex);
-                            setSelectedId(photos[nextIndex]?.id ?? null);
-                          }}
-                          resetNonceById={resetNonceById}
-                        />
+                        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+                          <div className="flex min-h-full items-center justify-center">
+                            <CoverFlowCarousel
+                              photos={photos}
+                              decayLevels={decayLevels}
+                              currentIndex={currentIndex}
+                              selectedLayoutId={selectedId}
+                              detailEntryNonce={detailEntryNonce}
+                              onChangeIndex={(nextIndex: number) => {
+                                setCurrentIndex(nextIndex);
+                                setSelectedId(photos[nextIndex]?.id ?? null);
+                              }}
+                              resetNonceById={resetNonceById}
+                            />
+                          </div>
+                        </div>
 
                         <motion.div
                           key={`detail-controls-${detailEntryNonce}`}
-                          className="w-full"
+                          className="shrink-0 w-full"
                           initial={{ x: -300, opacity: 0 }}
                           animate={{ x: 0, opacity: 1 }}
                           exit={{ x: -300, opacity: 0 }}
