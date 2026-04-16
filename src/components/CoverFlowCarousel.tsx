@@ -15,6 +15,8 @@ interface CoverFlowCarouselProps {
   currentIndex: number;
   onChangeIndex: (nextIndex: number) => void;
   resetNonceById: Record<string, number | undefined>;
+  selectedLayoutId?: string | null;
+  detailEntryNonce?: number;
 }
 
 /** Fixed outer dimensions so previews are not squashed when motion sets transform. */
@@ -34,6 +36,8 @@ export function CoverFlowCarousel({
   currentIndex,
   onChangeIndex,
   resetNonceById,
+  selectedLayoutId = null,
+  detailEntryNonce = 0,
 }: CoverFlowCarouselProps) {
   const totalSlides = photos.length;
 
@@ -54,8 +58,11 @@ export function CoverFlowCarousel({
     const isLandscape = photo.orientation === 'landscape';
     const frameClasses = isLarge ? frameLarge(isLandscape) : frameSmall(isLandscape);
 
+    const sharedLayoutId = isLarge && selectedLayoutId === photo.id ? `photo-${photo.id}` : undefined;
+
     return (
-      <div
+      <motion.div
+        layoutId={sharedLayoutId}
         className={`${frameClasses} relative shrink-0 overflow-hidden border-black box-border`}
         style={{ opacity }}
       >
@@ -68,7 +75,7 @@ export function CoverFlowCarousel({
           decayLevel={decayLevels[photo.id] ?? 0}
           resetNonce={resetNonceById[photo.id] ?? 0}
         />
-      </div>
+      </motion.div>
     );
   };
 
@@ -123,23 +130,39 @@ export function CoverFlowCarousel({
           {renderSlide(nextIndex, 'small', 0.3)}
         </motion.div>
 
-        <button
-          type="button"
-          onClick={handlePrevious}
-          className="absolute left-8 top-1/2 -translate-y-1/2 z-20 w-12 h-12 bg-white border-2 border-black hover:bg-black hover:text-white transition-colors flex items-center justify-center"
-          aria-label="Previous photo"
+        <motion.div
+          key={`arrow-left-${detailEntryNonce}`}
+          className="absolute left-8 top-1/2 -translate-y-1/2 z-20"
+          initial={{ x: -150, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
         >
-          <ChevronLeft className="w-6 h-6" />
-        </button>
+          <button
+            type="button"
+            onClick={handlePrevious}
+            className="w-12 h-12 bg-white border-2 border-black hover:bg-black hover:text-white transition-colors flex items-center justify-center"
+            aria-label="Previous photo"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+        </motion.div>
 
-        <button
-          type="button"
-          onClick={handleNext}
-          className="absolute right-8 top-1/2 -translate-y-1/2 z-20 w-12 h-12 bg-white border-2 border-black hover:bg-black hover:text-white transition-colors flex items-center justify-center"
-          aria-label="Next photo"
+        <motion.div
+          key={`arrow-right-${detailEntryNonce}`}
+          className="absolute right-8 top-1/2 -translate-y-1/2 z-20"
+          initial={{ x: 150, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
         >
-          <ChevronRight className="w-6 h-6" />
-        </button>
+          <button
+            type="button"
+            onClick={handleNext}
+            className="w-12 h-12 bg-white border-2 border-black hover:bg-black hover:text-white transition-colors flex items-center justify-center"
+            aria-label="Next photo"
+          >
+            <ChevronRight className="w-6 h-6" />
+          </button>
+        </motion.div>
       </div>
     </div>
   );

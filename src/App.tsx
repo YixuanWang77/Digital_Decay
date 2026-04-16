@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { CoverFlowCarousel } from './components/CoverFlowCarousel';
+import { OverviewList } from './components/OverviewList';
 
 import photo01 from '../Sources/Photo 01.jpeg';
 import photo02 from '../Sources/Photo 02.jpeg';
@@ -116,15 +118,21 @@ function App() {
   const [decayLevels, setDecayLevels] = useState<Record<string, 0 | 1 | 2 | 3>>({});
   const [manualMode, setManualMode] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'overview' | 'detail'>('overview');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isExploding, setIsExploding] = useState(false);
+  const [detailEntryNonce, setDetailEntryNonce] = useState(0);
 
   const [resetNonceById, setResetNonceById] = useState<Record<string, number>>({});
 
   const activePhotoId = photos[currentIndex]?.id;
   const currentDecayLevel = activePhotoId ? (decayLevels[activePhotoId] ?? 0) : 0;
   const canManual = manualMode;
+  const selectedPhotoName = selectedId ? photos.find((photo) => photo.id === selectedId)?.fileName ?? null : null;
 
   const pollTimerRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const explodeTimerRef = useRef<number | null>(null);
 
   const mapFaceCountToDecayLevel = (count: number): 0 | 1 | 2 | 3 => {
     if (!Number.isFinite(count) || count <= 0) return 0;
@@ -192,15 +200,67 @@ function App() {
 
   const setLevel = (level: 0 | 1 | 2 | 3) => {
     if (!canManual) return;
+    if (viewMode === 'overview') {
+      setDecayLevels((prev) => {
+        const next = { ...prev };
+        photos.forEach((photo) => {
+          next[photo.id] = level;
+        });
+        return next;
+      });
+      return;
+    }
     if (!activePhotoId) return;
     setDecayLevels((prev) => ({ ...prev, [activePhotoId]: level }));
   };
 
   const resetActive = () => {
+    if (viewMode === 'overview') {
+      setDecayLevels((prev) => {
+        const next = { ...prev };
+        photos.forEach((photo) => {
+          next[photo.id] = 0;
+        });
+        return next;
+      });
+      setResetNonceById((prev) => {
+        const next = { ...prev };
+        photos.forEach((photo) => {
+          next[photo.id] = (prev[photo.id] ?? 0) + 1;
+        });
+        return next;
+      });
+      return;
+    }
     if (!activePhotoId) return;
     setDecayLevels((prev) => ({ ...prev, [activePhotoId]: 0 }));
     setResetNonceById((prev) => ({ ...prev, [activePhotoId]: (prev[activePhotoId] ?? 0) + 1 }));
   };
+
+  const handleSelectOverviewItem = (id: string) => {
+    const nextIndex = photos.findIndex((photo) => photo.id === id);
+    if (nextIndex < 0) return;
+    setSelectedId(id);
+    setCurrentIndex(nextIndex);
+    setIsExploding(true);
+    if (explodeTimerRef.current !== null) {
+      window.clearTimeout(explodeTimerRef.current);
+    }
+    explodeTimerRef.current = window.setTimeout(() => {
+      setViewMode('detail');
+      setDetailEntryNonce((prev) => prev + 1);
+      setIsExploding(false);
+      explodeTimerRef.current = null;
+    }, 400);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (explodeTimerRef.current !== null) {
+        window.clearTimeout(explodeTimerRef.current);
+      }
+    };
+  }, []);
 
   const navItems = ['Gallery (Homepage)', 'Concept / Narrative', 'Art & Production', 'Technical Development', 'About'];
 
@@ -290,77 +350,138 @@ function App() {
               pointerEvents: isMenuOpen ? 'none' : 'auto',
             }}
           >
-            <div className="flex min-h-screen items-center justify-center">
-              <div className="w-full min-h-0 flex flex-col">
-                <CoverFlowCarousel
-                  photos={photos}
-                  decayLevels={decayLevels}
-                  currentIndex={currentIndex}
-                  onChangeIndex={setCurrentIndex}
-                  resetNonceById={resetNonceById}
-                />
-
-                <div className="w-full max-w-7xl mx-auto px-8 mt-6 pb-8">
-                  <div className="flex items-center justify-end gap-8">
-                    <button
-                      type="button"
-                      aria-label="Level 1"
-                      onClick={() => setLevel(1)}
-                      disabled={!canManual}
-                      className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center bg-neutral-200 transition-colors disabled:text-neutral-300 ${canManual ? 'hover:bg-black hover:text-white' : ''}`}
+            <div style={{ display: 'block', width: '100%', minHeight: '100vh', boxSizing: 'border-box' }}>
+              <div style={{ display: 'block', width: '100%', boxSizing: 'border-box' }}>
+                <AnimatePresence mode="wait">
+                  {viewMode === 'overview' ? (
+                    <motion.div
+                      key="overview"
+                      className="w-full"
+                      initial={{ opacity: 1 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0, transition: { duration: 0.2 } }}
                     >
-                      <IconSingleUser className={`w-6 h-6 ${!canManual ? 'text-neutral-300 opacity-70' : ''}`} />
-                    </button>
-
-                    <button
-                      type="button"
-                      aria-label="Level 2"
-                      onClick={() => setLevel(2)}
-                      disabled={!canManual}
-                      className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center bg-white transition-colors disabled:text-neutral-300 ${canManual ? 'hover:bg-black hover:text-white' : ''}`}
+                      <OverviewList
+                        photos={photos}
+                        decayLevels={decayLevels}
+                        resetNonceById={resetNonceById}
+                        selectedId={selectedId}
+                        isExploding={isExploding}
+                        onSelect={handleSelectOverviewItem}
+                      />
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="detail"
+                      className="w-full"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
                     >
-                      <IconTwoUsers className={`w-6 h-6 ${!canManual ? 'text-neutral-300 opacity-70' : ''}`} />
-                    </button>
+                    <div className="w-full max-w-7xl mx-auto px-8 pt-6">
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setViewMode('overview');
+                            setIsExploding(false);
+                          }}
+                          className="px-5 py-2 border-2 border-black bg-white text-black uppercase tracking-[0.2em] text-xs font-semibold hover:bg-black hover:text-white transition-colors"
+                          aria-label={`Back to overview list${selectedPhotoName ? ` from ${selectedPhotoName}` : ''}`}
+                        >
+                          Back
+                        </button>
+                      </div>
+                    </div>
+                    <CoverFlowCarousel
+                      photos={photos}
+                      decayLevels={decayLevels}
+                      currentIndex={currentIndex}
+                      selectedLayoutId={selectedId}
+                      detailEntryNonce={detailEntryNonce}
+                      onChangeIndex={(nextIndex: number) => {
+                        setCurrentIndex(nextIndex);
+                        setSelectedId(photos[nextIndex]?.id ?? null);
+                      }}
+                      resetNonceById={resetNonceById}
+                    />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
-                    <button
-                      type="button"
-                      aria-label="Level 3"
-                      onClick={() => setLevel(3)}
-                      disabled={!canManual}
-                      className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center bg-white transition-colors disabled:text-neutral-300 ${canManual ? 'hover:bg-black hover:text-white' : ''}`}
+                <AnimatePresence>
+                  {viewMode === 'detail' && (
+                    <motion.div
+                      key={`detail-controls-${detailEntryNonce}`}
+                      className="w-full max-w-7xl mx-auto px-8 mt-6 pb-8"
+                      initial={{ x: -300, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      exit={{ x: -300, opacity: 0 }}
+                      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
                     >
-                      <IconThreeUsers className={`w-6 h-6 ${!canManual ? 'text-neutral-300 opacity-70' : ''}`} />
-                    </button>
+                      <div className="flex items-center justify-end gap-8">
+                        <button
+                          type="button"
+                          aria-label="Level 1"
+                          onClick={() => setLevel(1)}
+                          disabled={!canManual}
+                          className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center bg-neutral-200 transition-colors disabled:text-neutral-300 ${canManual ? 'hover:bg-black hover:text-white' : ''}`}
+                        >
+                          <IconSingleUser className={`w-6 h-6 ${!canManual ? 'text-neutral-300 opacity-70' : ''}`} />
+                        </button>
 
-                    <button
-                      type="button"
-                      aria-label="Reset current image to perfect state"
-                      onClick={resetActive}
-                      className="w-12 h-12 shrink-0 border-2 border-black bg-white hover:bg-black hover:text-white transition-colors flex items-center justify-center"
-                    >
-                      <IconReset className="w-6 h-6" />
-                    </button>
+                        <button
+                          type="button"
+                          aria-label="Level 2"
+                          onClick={() => setLevel(2)}
+                          disabled={!canManual}
+                          className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center bg-white transition-colors disabled:text-neutral-300 ${canManual ? 'hover:bg-black hover:text-white' : ''}`}
+                        >
+                          <IconTwoUsers className={`w-6 h-6 ${!canManual ? 'text-neutral-300 opacity-70' : ''}`} />
+                        </button>
 
-                    <button
-                      type="button"
-                      aria-label={
-                        manualMode
-                          ? 'Manual mode: use level buttons (cursor)'
-                          : 'Auto camera mode: decay is irreversible (eye)'
-                      }
-                      onClick={() => setManualMode((v) => !v)}
-                      className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center transition-colors hover:bg-black hover:text-white ${
-                        manualMode ? 'bg-white' : 'bg-neutral-200'
-                      }`}
-                    >
-                      {manualMode ? (
-                        <IconCursorManual className="w-6 h-6" />
-                      ) : (
-                        <IconEyeAuto className="w-6 h-6" />
-                      )}
-                    </button>
-                  </div>
-                </div>
+                        <button
+                          type="button"
+                          aria-label="Level 3"
+                          onClick={() => setLevel(3)}
+                          disabled={!canManual}
+                          className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center bg-white transition-colors disabled:text-neutral-300 ${canManual ? 'hover:bg-black hover:text-white' : ''}`}
+                        >
+                          <IconThreeUsers className={`w-6 h-6 ${!canManual ? 'text-neutral-300 opacity-70' : ''}`} />
+                        </button>
+
+                        <button
+                          type="button"
+                          aria-label="Reset current image to perfect state"
+                          onClick={resetActive}
+                          className="w-12 h-12 shrink-0 border-2 border-black bg-white hover:bg-black hover:text-white transition-colors flex items-center justify-center"
+                        >
+                          <IconReset className="w-6 h-6" />
+                        </button>
+
+                        <button
+                          type="button"
+                          aria-label={
+                            manualMode
+                              ? 'Manual mode: use level buttons (cursor)'
+                              : 'Auto camera mode: decay is irreversible (eye)'
+                          }
+                          onClick={() => setManualMode((v) => !v)}
+                          className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center transition-colors hover:bg-black hover:text-white ${
+                            manualMode ? 'bg-white' : 'bg-neutral-200'
+                          }`}
+                        >
+                          {manualMode ? (
+                            <IconCursorManual className="w-6 h-6" />
+                          ) : (
+                            <IconEyeAuto className="w-6 h-6" />
+                          )}
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
           </div>
