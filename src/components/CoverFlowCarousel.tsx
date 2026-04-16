@@ -20,15 +20,11 @@ interface CoverFlowCarouselProps {
 }
 
 /** Fixed outer dimensions so previews are not squashed when motion sets transform. */
-const frameLarge = (landscape: boolean) =>
-  landscape
-    ? 'w-[750px] min-w-[750px] max-w-[750px] h-[600px] min-h-[600px] max-h-[600px] border-4 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]'
-    : 'w-[600px] min-w-[600px] max-w-[600px] h-[750px] min-h-[750px] max-h-[750px] border-4 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]';
+const frameLargeSize = (landscape: boolean) =>
+  landscape ? { width: 750, height: 600 } : { width: 600, height: 750 };
 
-const frameSmall = (landscape: boolean) =>
-  landscape
-    ? 'w-[500px] min-w-[500px] max-w-[500px] h-[400px] min-h-[400px] max-h-[400px] border-2'
-    : 'w-96 min-w-96 max-w-96 h-[576px] min-h-[576px] max-h-[576px] border-2';
+const frameSmallSize = (landscape: boolean) =>
+  landscape ? { width: 500, height: 400 } : { width: 384, height: 576 };
 
 export function CoverFlowCarousel({
   photos,
@@ -56,7 +52,10 @@ export function CoverFlowCarousel({
     const isLarge = size === 'large';
     const photo = photos[index];
     const isLandscape = photo.orientation === 'landscape';
-    const frameClasses = isLarge ? frameLarge(isLandscape) : frameSmall(isLandscape);
+    const frameSize = isLarge ? frameLargeSize(isLandscape) : frameSmallSize(isLandscape);
+    const frameClasses = isLarge
+      ? 'border-4 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]'
+      : 'border-2';
 
     const sharedLayoutId = isLarge && selectedLayoutId === photo.id ? `photo-${photo.id}` : undefined;
 
@@ -64,7 +63,16 @@ export function CoverFlowCarousel({
       <motion.div
         layoutId={sharedLayoutId}
         className={`${frameClasses} relative shrink-0 overflow-hidden border-black box-border`}
-        style={{ opacity }}
+        style={{
+          opacity,
+          width: `${frameSize.width}px`,
+          minWidth: `${frameSize.width}px`,
+          maxWidth: `${frameSize.width}px`,
+          height: `${frameSize.height}px`,
+          minHeight: `${frameSize.height}px`,
+          maxHeight: `${frameSize.height}px`,
+          flex: '0 0 auto',
+        }}
       >
         <DecayingImage
           id={photo.id}
@@ -89,10 +97,18 @@ export function CoverFlowCarousel({
 
   const previousIndex = getPreviousIndex();
   const nextIndex = getNextIndex();
+  const activeIsLandscape = photos[currentIndex]?.orientation === 'landscape';
+  const activeLargeSize = frameLargeSize(activeIsLandscape);
 
   return (
     <div className="w-full max-w-7xl mx-auto px-8">
-      <div className="relative h-[75vh] min-h-[500px] w-full flex items-center justify-center">
+      <div
+        className="relative w-full flex items-center justify-center"
+        style={{
+          minHeight: `${activeLargeSize.height}px`,
+          height: '75vh',
+        }}
+      >
         <motion.div
           key={`prev-${previousIndex}`}
           className="absolute left-0 z-[5] cursor-pointer"

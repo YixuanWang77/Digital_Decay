@@ -386,7 +386,10 @@ function App() {
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
                     >
-                      <div className="w-full max-w-7xl mx-auto px-8 flex flex-col gap-8 justify-center">
+                      <div
+                        className="w-full max-w-7xl mx-auto px-8 flex flex-col gap-8 justify-center"
+                        style={{ flex: '0 0 auto' }}
+                      >
                         <div className="w-full flex justify-end">
                           <button
                             type="button"
