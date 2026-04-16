@@ -120,19 +120,16 @@ function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'overview' | 'detail'>('overview');
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [isExploding, setIsExploding] = useState(false);
   const [detailEntryNonce, setDetailEntryNonce] = useState(0);
 
   const [resetNonceById, setResetNonceById] = useState<Record<string, number>>({});
 
   const activePhotoId = photos[currentIndex]?.id;
-  const currentDecayLevel = activePhotoId ? (decayLevels[activePhotoId] ?? 0) : 0;
   const canManual = manualMode;
   const selectedPhotoName = selectedId ? photos.find((photo) => photo.id === selectedId)?.fileName ?? null : null;
 
   const pollTimerRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const explodeTimerRef = useRef<number | null>(null);
 
   const mapFaceCountToDecayLevel = (count: number): 0 | 1 | 2 | 3 => {
     if (!Number.isFinite(count) || count <= 0) return 0;
@@ -242,25 +239,9 @@ function App() {
     if (nextIndex < 0) return;
     setSelectedId(id);
     setCurrentIndex(nextIndex);
-    setIsExploding(true);
-    if (explodeTimerRef.current !== null) {
-      window.clearTimeout(explodeTimerRef.current);
-    }
-    explodeTimerRef.current = window.setTimeout(() => {
-      setViewMode('detail');
-      setDetailEntryNonce((prev) => prev + 1);
-      setIsExploding(false);
-      explodeTimerRef.current = null;
-    }, 400);
+    setViewMode('detail');
+    setDetailEntryNonce((prev) => prev + 1);
   };
-
-  useEffect(() => {
-    return () => {
-      if (explodeTimerRef.current !== null) {
-        window.clearTimeout(explodeTimerRef.current);
-      }
-    };
-  }, []);
 
   const navItems = ['Gallery (Homepage)', 'Concept / Narrative', 'Art & Production', 'Technical Development', 'About'];
 
@@ -351,12 +332,21 @@ function App() {
             }}
           >
             <div style={{ display: 'block', width: '100%', minHeight: '100vh', boxSizing: 'border-box' }}>
-              <div style={{ display: 'block', width: '100%', boxSizing: 'border-box' }}>
-                <AnimatePresence mode="wait">
-                  {viewMode === 'overview' ? (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr',
+                  gridTemplateRows: '1fr',
+                  width: '100%',
+                  boxSizing: 'border-box',
+                }}
+              >
+                <AnimatePresence>
+                  {viewMode === 'overview' && (
                     <motion.div
                       key="overview"
                       className="w-full"
+                      style={{ gridArea: '1 / 1 / 2 / 2' }}
                       initial={{ opacity: 1 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0, transition: { duration: 0.2 } }}
@@ -366,17 +356,20 @@ function App() {
                         decayLevels={decayLevels}
                         resetNonceById={resetNonceById}
                         selectedId={selectedId}
-                        isExploding={isExploding}
                         onSelect={handleSelectOverviewItem}
                       />
                     </motion.div>
-                  ) : (
+                  )}
+                  {viewMode === 'detail' && (
                     <motion.div
                       key="detail"
                       className="w-full flex flex-col items-center justify-center"
                       style={{
+                        gridArea: '1 / 1 / 2 / 2',
                         width: '100%',
                         minHeight: '100vh',
+                        backgroundColor: 'white',
+                        zIndex: 10,
                       }}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
@@ -392,7 +385,6 @@ function App() {
                             type="button"
                             onClick={() => {
                               setViewMode('overview');
-                              setIsExploding(false);
                             }}
                             className="px-5 py-2 border-2 border-black bg-white text-black uppercase tracking-[0.2em] text-xs font-semibold hover:bg-black hover:text-white transition-colors"
                             aria-label={`Back to overview list${selectedPhotoName ? ` from ${selectedPhotoName}` : ''}`}

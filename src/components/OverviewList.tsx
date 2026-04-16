@@ -14,7 +14,6 @@ interface OverviewListProps {
   decayLevels: Record<string, 0 | 1 | 2 | 3>;
   resetNonceById: Record<string, number | undefined>;
   selectedId: string | null;
-  isExploding: boolean;
   onSelect: (id: string) => void;
 }
 
@@ -34,7 +33,6 @@ export function OverviewList({
   decayLevels,
   resetNonceById,
   selectedId,
-  isExploding,
   onSelect,
 }: OverviewListProps) {
   const selectedIndex = selectedId ? photos.findIndex((p) => p.id === selectedId) : -1;
@@ -64,8 +62,6 @@ export function OverviewList({
             const paddingTop = col === 0 ? '0px' : col === 1 ? '180px' : '90px';
             const frameHeightPx = photo.orientation === 'landscape' ? 320 : 500;
 
-            const exploding = isExploding && !isSelected;
-
             return (
               <motion.div
                 key={photo.id}
@@ -76,28 +72,25 @@ export function OverviewList({
                   boxSizing: 'border-box',
                 }}
                 initial={{ opacity: 1, x: 0, y: 0 }}
-                animate={
-                  exploding
-                    ? {
+                animate={{ opacity: 1, x: 0, y: 0 }}
+                exit={
+                  isSelected
+                    ? { opacity: 0 }
+                    : {
                         x: col === 0 ? -2000 : col === 2 ? 2000 : 0,
                         y: col === 1 ? (index < selectedIndex ? -2000 : 2000) : 0,
                         opacity: 0,
                       }
-                    : { opacity: 1, x: 0, y: 0 }
                 }
-                transition={
-                  exploding
-                    ? { duration: 0.5, ease: [0.16, 1, 0.3, 1] }
-                    : { duration: 0.2 }
-                }
-                onClick={() => !isExploding && onSelect(photo.id)}
+                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                onClick={() => onSelect(photo.id)}
                 className="cursor-pointer"
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    if (!isExploding) onSelect(photo.id);
+                    onSelect(photo.id);
                   }
                 }}
                 aria-label={`Open ${photo.fileName}`}
