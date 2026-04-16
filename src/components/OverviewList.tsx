@@ -118,7 +118,7 @@ export function OverviewList({
                     className="w-full h-full object-cover"
                     decayLevel={decayLevels[photo.id] ?? 0}
                     resetNonce={resetNonceById[photo.id] ?? 0}
-                    isActive
+                    isActive={false}
                   />
                 </motion.div>
               </motion.div>
