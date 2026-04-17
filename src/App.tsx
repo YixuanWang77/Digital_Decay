@@ -394,7 +394,7 @@ function App() {
                       transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
                     >
                       <div className="flex h-full min-h-0 w-full max-w-7xl flex-col gap-8 mx-auto px-8">
-                        <div className="shrink-0 w-full flex" style={{ justifyContent: 'flex-start', paddingTop: '24px', paddingLeft: '24px' }}>
+                        <div className="shrink-0 w-full flex justify-end">
                           <button
                             type="button"
                             onClick={() => {
@@ -427,13 +427,12 @@ function App() {
                         <motion.div
                           key={`detail-controls-${detailEntryNonce}`}
                           className="shrink-0 w-full"
-                          style={{ paddingBottom: '32px', paddingLeft: '24px' }}
                           initial={{ x: -300, opacity: 0 }}
                           animate={{ x: 0, opacity: 1 }}
                           exit={{ x: -300, opacity: 0 }}
                           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
                         >
-                          <div className="flex items-center gap-8" style={{ justifyContent: 'flex-start' }}>
+                          <div className="flex items-center justify-end gap-8">
                             <button
                               type="button"
                               aria-label="Level 1"
