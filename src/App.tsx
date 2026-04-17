@@ -133,8 +133,9 @@ function App() {
 
   const mapFaceCountToDecayLevel = (count: number): 0 | 1 | 2 | 3 => {
     if (!Number.isFinite(count) || count <= 0) return 0;
-    if (count <= 3) return 1;
-    return 2;
+    if (count === 1) return 1;
+    if (count === 2) return 2;
+    return 3; // 3 or more people trigger the maximum decay
   };
 
   useEffect(() => {
