@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import landingVideo from '../Sources/Animations.mp4';
+
 import { CoverFlowCarousel } from './components/CoverFlowCarousel';
 import { OverviewList } from './components/OverviewList';
 
@@ -12,6 +17,8 @@ import photo06 from '../Sources/Photo 06.jpeg';
 import photo07 from '../Sources/Photo 07.jpg';
 import photo08 from '../Sources/Photo 08.jpeg';
 import photo09 from '../Sources/Photo 09.jpeg';
+
+gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 const basePhotos = [
   { url: photo01, fileName: 'Photo 01.jpeg', orientation: 'portrait' as const },
@@ -102,6 +109,85 @@ function IconEyeAuto(props: { className?: string }) {
   );
 }
 
+function LandingSequence({ onComplete }: { onComplete: () => void }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const videoWrapperRef = useRef<HTMLDivElement>(null);
+  const textContainerRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      const container = containerRef.current;
+      const videoWrap = videoWrapperRef.current;
+      const textEl = textContainerRef.current;
+      if (!container || !videoWrap || !textEl) return;
+
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: container,
+          start: 'top top',
+          end: '+=3000',
+          scrub: 1,
+          pin: true,
+          onLeave: () => {
+            window.scrollTo(0, 0);
+            onComplete();
+          },
+        },
+      });
+
+      // Zoom the text outwards from the center gap
+      tl.to(textEl, {
+        scale: 100,
+        opacity: 0,
+        ease: 'power2.in',
+      });
+
+      // Fade out the video background
+      tl.to(
+        videoWrap,
+        {
+          opacity: 0,
+          duration: 0.5,
+          ease: 'power1.inOut',
+        },
+        '-=0.2',
+      );
+    },
+    { scope: containerRef },
+  );
+
+  return (
+    <div ref={containerRef} className="relative z-50 w-full h-screen overflow-hidden bg-white">
+      {/* Layer 2: Video Background */}
+      <div ref={videoWrapperRef} className="absolute inset-0 w-full h-screen z-10 bg-black">
+        <video
+          src={landingVideo}
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="w-full h-full object-cover opacity-100"
+        />
+      </div>
+
+      {/* Layer 3: White Text Overlay */}
+      <div
+        ref={textContainerRef}
+        className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
+        style={{ transformOrigin: 'center center' }}
+      >
+        <h1
+          className="text-white font-black flex items-center gap-[6vw] whitespace-nowrap m-0 p-0"
+          style={{ fontSize: '9vw', letterSpacing: '0.02em' }}
+        >
+          <span>DIGITAL</span>
+          <span>DECAY</span>
+        </h1>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const photos = useMemo(
     () =>
@@ -118,7 +204,7 @@ function App() {
   const [decayLevels, setDecayLevels] = useState<Record<string, 0 | 1 | 2 | 3>>({});
   const [manualMode, setManualMode] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'overview' | 'detail'>('overview');
+  const [viewMode, setViewMode] = useState<'landing' | 'overview' | 'detail'>('landing');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailEntryNonce, setDetailEntryNonce] = useState(0);
 
@@ -198,7 +284,7 @@ function App() {
 
   const setLevel = (level: 0 | 1 | 2 | 3) => {
     if (!canManual) return;
-    if (viewMode === 'overview') {
+    if (viewMode === 'overview' || viewMode === 'landing') {
       setDecayLevels((prev) => {
         const next = { ...prev };
         photos.forEach((photo) => {
@@ -213,7 +299,7 @@ function App() {
   };
 
   const resetActive = () => {
-    if (viewMode === 'overview') {
+    if (viewMode === 'overview' || viewMode === 'landing') {
       setDecayLevels((prev) => {
         const next = { ...prev };
         photos.forEach((photo) => {
@@ -248,6 +334,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-white text-black overflow-x-hidden">
+      {viewMode === 'landing' && <LandingSequence onComplete={() => setViewMode('overview')} />}
       <div className="relative min-h-screen">
         
         {/* 1. Fixed Sidebar (Pure inline styles to guarantee width/position) */}
@@ -322,7 +409,8 @@ function App() {
             height: viewMode === 'detail' ? '100dvh' : undefined,
             maxHeight: viewMode === 'detail' ? '100dvh' : undefined,
             overflow: viewMode === 'detail' ? 'hidden' : undefined,
-            position: 'relative',
+            position: viewMode === 'landing' ? 'fixed' : 'relative',
+            top: viewMode === 'landing' ? 0 : undefined,
             zIndex: 10,
           }}
         >
@@ -335,7 +423,7 @@ function App() {
               overflow: viewMode === 'detail' ? 'hidden' : undefined,
               transition: 'filter 0.5s cubic-bezier(0.16,1,0.3,1)',
               filter: isMenuOpen ? 'blur(12px) brightness(0.8)' : 'blur(0px) brightness(1)',
-              pointerEvents: isMenuOpen ? 'none' : 'auto',
+              pointerEvents: viewMode === 'landing' || isMenuOpen ? 'none' : 'auto',
             }}
           >
             <div
@@ -361,7 +449,7 @@ function App() {
                 }}
               >
                 <AnimatePresence>
-                  {viewMode === 'overview' && (
+                  {(viewMode === 'overview' || viewMode === 'landing') && (
                     <motion.div
                       key="overview"
                       className="w-full"

@@ -937,3 +937,8 @@ html {
   syntax: "*";
   inherits: false
 }
+
+html,
+body {
+  overflow-x: hidden;
+}
