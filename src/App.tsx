@@ -135,14 +135,14 @@ function LandingSequence({ onComplete }: { onComplete: () => void }) {
         },
       });
 
-      // Zoom the text outwards from the center gap
+      // 强行放大 150 倍，确保无论屏幕多大都能完全穿透
       tl.to(textEl, {
-        scale: 100,
+        scale: 150,
         opacity: 0,
         ease: 'power2.in',
       });
 
-      // Fade out the video background
+      // 背景视频淡出
       tl.to(
         videoWrap,
         {
@@ -157,28 +157,77 @@ function LandingSequence({ onComplete }: { onComplete: () => void }) {
   );
 
   return (
-    <div ref={containerRef} className="relative z-50 w-full h-screen overflow-hidden bg-white">
+    <div
+      ref={containerRef}
+      style={{
+        position: 'relative',
+        zIndex: 100, // 强行突破 10 的封锁，立于最顶层
+        width: '100%',
+        height: '100vh',
+        overflow: 'hidden',
+        backgroundColor: '#ffffff',
+      }}
+    >
       {/* Layer 2: Video Background */}
-      <div ref={videoWrapperRef} className="absolute inset-0 w-full h-screen z-10 bg-black">
+      <div
+        ref={videoWrapperRef}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100%',
+          height: '100vh',
+          zIndex: 10,
+          backgroundColor: '#000000',
+        }}
+      >
         <video
           src={landingVideo}
           autoPlay
           loop
           muted
           playsInline
-          className="w-full h-full object-cover opacity-100"
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            opacity: 1,
+          }}
         />
       </div>
 
       {/* Layer 3: White Text Overlay */}
       <div
         ref={textContainerRef}
-        className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
-        style={{ transformOrigin: 'center center' }}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 20,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          pointerEvents: 'none',
+          transformOrigin: 'center center',
+        }}
       >
         <h1
-          className="text-white font-black flex items-center gap-[6vw] whitespace-nowrap m-0 p-0"
-          style={{ fontSize: '9vw', letterSpacing: '0.02em' }}
+          style={{
+            color: '#ffffff',
+            fontWeight: 900,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6vw',
+            whiteSpace: 'nowrap',
+            margin: 0,
+            padding: 0,
+            fontSize: '9vw',
+            letterSpacing: '0.02em',
+          }}
         >
           <span>DIGITAL</span>
           <span>DECAY</span>
