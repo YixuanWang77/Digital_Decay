@@ -112,20 +112,20 @@ function IconEyeAuto(props: { className?: string }) {
 function LandingSequence({ onComplete }: { onComplete: () => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoWrapperRef = useRef<HTMLDivElement>(null);
-  const textContainerRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLHeadingElement>(null);
 
   useGSAP(
     () => {
       const container = containerRef.current;
       const videoWrap = videoWrapperRef.current;
-      const textEl = textContainerRef.current;
+      const textEl = textRef.current;
       if (!container || !videoWrap || !textEl) return;
 
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: container,
           start: 'top top',
-          end: '+=3000',
+          end: '+=600', // 稍微增加滚动长度，让穿梭过程更细腻
           scrub: 1,
           pin: true,
           onLeave: () => {
@@ -135,22 +135,22 @@ function LandingSequence({ onComplete }: { onComplete: () => void }) {
         },
       });
 
-      // 强行放大 150 倍，确保无论屏幕多大都能完全穿透
+      // 1. 纯物理放大，删掉 opacity 动画，确保文字始终是 100% 纯白实心
+      // 放大倍数增加到 800 倍，确保镜头能完全“钻进” D 的内部
       tl.to(textEl, {
-        scale: 150,
-        opacity: 0,
-        ease: 'power2.in',
+        scale: 800,
+        ease: 'power3.in', // 使用更陡峭的曲线，营造最后的冲刺感
       });
 
-      // 背景视频淡出
+      // 2. 只有当镜头完全穿过字母、满眼都是视频时，视频才开始淡出
       tl.to(
         videoWrap,
         {
           opacity: 0,
-          duration: 0.5,
+          duration: 0.4,
           ease: 'power1.inOut',
         },
-        '-=0.2',
+        '-=0.15', // 在放大接近终点时开始淡出背景视频
       );
     },
     { scope: containerRef },
@@ -161,11 +161,11 @@ function LandingSequence({ onComplete }: { onComplete: () => void }) {
       ref={containerRef}
       style={{
         position: 'relative',
-        zIndex: 100, // 强行突破 10 的封锁，立于最顶层
+        zIndex: 100,
         width: '100%',
         height: '100vh',
         overflow: 'hidden',
-        backgroundColor: '#ffffff',
+        backgroundColor: '#ffffff', // 最终露出的底色
       }}
     >
       {/* Layer 2: Video Background */}
@@ -198,9 +198,8 @@ function LandingSequence({ onComplete }: { onComplete: () => void }) {
         />
       </div>
 
-      {/* Layer 3: White Text Overlay */}
+      {/* Layer 3: Solid White Text Overlay */}
       <div
-        ref={textContainerRef}
         style={{
           position: 'absolute',
           top: 0,
@@ -212,25 +211,26 @@ function LandingSequence({ onComplete }: { onComplete: () => void }) {
           alignItems: 'center',
           justifyContent: 'center',
           pointerEvents: 'none',
-          transformOrigin: 'center center',
         }}
       >
         <h1
+          ref={textRef}
           style={{
             color: '#ffffff',
             fontWeight: 900,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6vw',
             whiteSpace: 'nowrap',
             margin: 0,
             padding: 0,
-            fontSize: '9vw',
-            letterSpacing: '0.02em',
+            fontSize: '7.5vw', // 保持安全尺寸，不碰黑边
+            letterSpacing: '0.04em',
+            /* 核心修正：transformOrigin 移动到整行文字的 68.5% 位置。
+               这会把放大的靶心精准锁定在 DECAY 的第一个字母 'D' 的内部圆心。
+            */
+            transformOrigin: '68.5% 50%',
+            willChange: 'transform',
           }}
         >
-          <span>DIGITAL</span>
-          <span>DECAY</span>
+          DIGITAL DECAY
         </h1>
       </div>
     </div>
