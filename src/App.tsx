@@ -6,6 +6,10 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import landingVideo from '../Sources/Animations.mp4';
 import demoVideo from '../Sources/Demo.mp4';
 import techDiagram from '../Sources/Technical Development.jpeg';
+import artOverview from '../Sources/Deterioration Overview List.png';
+import level1 from '../Sources/Deterioration Level 1.png';
+import level2 from '../Sources/Deterioration Level 2.png';
+import level3 from '../Sources/Deterioration Level 3.png';
 
 import { CoverFlowCarousel } from './components/CoverFlowCarousel';
 import { OverviewList } from './components/OverviewList';
@@ -459,6 +463,54 @@ function TechnicalDevelopmentContent() {
   );
 }
 
+function ArtProductionContent() {
+  return (
+    <div className="min-h-screen w-full bg-white text-left px-20 py-24">
+      {/* Top Section: Explanation (40/60 Split) */}
+      <div style={{ display: 'flex', flexDirection: 'row', width: '100%', marginBottom: '8rem', alignItems: 'center' }}>
+        <div style={{ width: '40%', paddingRight: '5rem', boxSizing: 'border-box' }}>
+          <h2 style={{ fontSize: '2vw', fontWeight: 'bold', lineHeight: 1.15, marginBottom: '2.5rem', color: '#000' }}>
+            Visual Degradation & State Preservation
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', fontSize: '1.125rem', color: 'rgba(0,0,0,0.8)', lineHeight: 1.6 }}>
+            <p>
+              The visual deterioration in Digital Decay is categorized into three progressive stages, systematically employing techniques such as noise injection, heavy pixelation, and color stripping to simulate data rot.
+            </p>
+            <p>
+              A defining technical and artistic feature of this project is its global state preservation. Whether you are swiping through individual photos in the detail view or returning to the main overview gallery, the exact frame of decay is frozen and synchronized across the interface. This ensures that the memory's specific state of ruin is permanently recorded and consistently displayed, regardless of how you navigate the archive.
+            </p>
+          </div>
+        </div>
+        <div style={{ width: '60%' }}>
+          <img src={artOverview} alt="State Preservation Overview" style={{ width: '100%', height: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }} />
+        </div>
+      </div>
+
+      {/* Bottom Section: Three-Column Comparison (Full Width) */}
+      <div style={{ width: '100%', borderTop: '1px solid #f5f5f5', paddingTop: '6rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'row', gap: '2rem', width: '100%' }}>
+          {[
+            { img: level1, label: 'Level 1: Minor Decay' },
+            { img: level2, label: 'Level 2: Moderate Decay' },
+            { img: level3, label: 'Level 3: Severe Decay' },
+          ].map((item, idx) => (
+            <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <img
+                src={item.img}
+                alt={item.label}
+                style={{ width: '100%', height: 'auto', aspectRatio: '4/3', objectFit: 'cover', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+              />
+              <p style={{ fontSize: '0.875rem', fontWeight: 'bold', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#000' }}>
+                {item.label}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const photos = useMemo(
     () =>
@@ -475,7 +527,7 @@ function App() {
   const [decayLevels, setDecayLevels] = useState<Record<string, 0 | 1 | 2 | 3>>({});
   const [manualMode, setManualMode] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'landing' | 'overview' | 'detail' | 'homepage' | 'tech'>('landing');
+  const [viewMode, setViewMode] = useState<'landing' | 'overview' | 'detail' | 'homepage' | 'tech' | 'art'>('landing');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailEntryNonce, setDetailEntryNonce] = useState(0);
 
@@ -666,6 +718,7 @@ function App() {
                     if (item === 'Homepage') setViewMode('homepage');
                     if (item === 'Gallery') setViewMode('overview');
                     if (item === 'Technical Development') setViewMode('tech');
+                    if (item === 'Art & Production') setViewMode('art');
                     setIsMenuOpen(false);
                   }}
                   className="text-left text-2xl font-bold tracking-tight text-black/85 transition-colors duration-300 hover:text-black"
@@ -768,6 +821,19 @@ function App() {
                       transition={{ duration: 0.4 }}
                     >
                       <TechnicalDevelopmentContent />
+                    </motion.div>
+                  )}
+                  {viewMode === 'art' && (
+                    <motion.div
+                      key="art"
+                      className="w-full h-full overflow-y-auto bg-white"
+                      style={{ gridArea: '1 / 1 / 2 / 2', zIndex: 20 }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.4 }}
+                    >
+                      <ArtProductionContent />
                     </motion.div>
                   )}
                   {viewMode === 'detail' && (
