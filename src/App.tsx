@@ -5,6 +5,7 @@ import { useGSAP } from '@gsap/react';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import landingVideo from '../Sources/Animations.mp4';
 import demoVideo from '../Sources/Demo.mp4';
+import techDiagram from '../Sources/Technical Development.jpeg';
 
 import { CoverFlowCarousel } from './components/CoverFlowCarousel';
 import { OverviewList } from './components/OverviewList';
@@ -252,10 +253,10 @@ function HomepageContent() {
     <div className="min-h-screen w-full bg-white text-left">
       {/* ⚠️ 终极防弹布局：彻底抛弃 Tailwind 的左右排版，使用原生 Flex 强制并排 */}
       <div style={{ display: 'flex', flexDirection: 'row', width: '100%', minHeight: '100vh' }}>
-        {/* 左侧文字区：强制设定为 55% 宽度 */}
+        {/* Left Column: Narrative (40% text) */}
         <div
           style={{
-            width: '55%',
+            width: '40%',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
@@ -264,7 +265,7 @@ function HomepageContent() {
             boxSizing: 'border-box',
           }}
         >
-          <h2 style={{ fontSize: '3.5vw', fontWeight: 'bold', lineHeight: 1.1, marginBottom: '6rem', color: '#000' }}>
+          <h2 style={{ fontSize: '2vw', fontWeight: 'bold', lineHeight: 1.15, marginBottom: '3rem', color: '#000' }}>
             Digital Decay is an interactive webpage that uses real-time facial recognition technology to decay images on the webpage as browsing becomes more familiar, thereby visualizing the unreliability of digital memories.
           </h2>
 
@@ -288,10 +289,10 @@ function HomepageContent() {
           </div>
         </div>
 
-        {/* 右侧视频区：强制设定为 45% 宽度 */}
+        {/* Right Column: Media (60%) */}
         <div
           style={{
-            width: '45%',
+            width: '60%',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -301,7 +302,7 @@ function HomepageContent() {
             boxSizing: 'border-box',
           }}
         >
-          <div style={{ width: '100%', maxWidth: '600px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ width: '100%', maxWidth: '900px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div
               className="group"
               onClick={() => setIsPlaying(true)}
@@ -374,6 +375,90 @@ function HomepageContent() {
   );
 }
 
+function TechnicalDevelopmentContent() {
+  return (
+    <div className="min-h-screen w-full bg-white text-left">
+      <div style={{ display: 'flex', flexDirection: 'row', width: '100%', minHeight: '100vh' }}>
+        {/* Left Column: Technical Text (40%) */}
+        <div
+          style={{
+            width: '40%',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            padding: '4rem 5rem',
+            borderRight: '1px solid #f5f5f5',
+            boxSizing: 'border-box',
+          }}
+        >
+          <h2 style={{ fontSize: '2vw', fontWeight: 'bold', lineHeight: 1.15, marginBottom: '3rem', color: '#000' }}>
+            System Architecture & Interaction Modes
+          </h2>
+
+          <div
+            style={{
+              maxWidth: '600px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '2rem',
+              fontSize: '1.125rem',
+              color: 'rgba(0,0,0,0.8)',
+              lineHeight: 1.6,
+            }}
+          >
+            <p>
+              The architecture of Digital Decay is built on a strict separation between physical sensing (Python/OpenCV), state management (React), and real-time rendering (WebGL/p5.js). To demonstrate the core concept of data degradation, the system operates in two distinct interaction modes.
+            </p>
+
+            <div>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#000', marginBottom: '0.5rem' }}>Auto Mode (Facial Recognition)</h3>
+              <p>
+                In the primary mode, a Python backend continuously monitors the physical space via a webcam to calculate the active audience headcount. This data is asynchronously polled by the React frontend and mapped to a specific corruption scale (Level 0 to 3). The decay is driven entirely by passive human observation—as long as faces are detected, the rendering layer dynamically and irreversibly erodes the image data.
+              </p>
+            </div>
+
+            <div>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#000', marginBottom: '0.5rem' }}>Manual Mode (Direct Override)</h3>
+              <p>
+                Bypassing the hardware sensing, the manual mode allows for direct UI intervention via cursor controls. Users can manually trigger specific decay levels (1 to 3) or reset the images to their pristine state. This serves both as a technical debugging environment and as a comparative baseline, isolating the rendering engine from the unpredictability of physical audience tracking.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Technical Diagram (60%) */}
+        <div
+          style={{
+            width: '60%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#fafafa',
+            padding: '2rem',
+            boxSizing: 'border-box',
+          }}
+        >
+          <div style={{ width: '100%', maxWidth: 'none', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <img
+              src={techDiagram}
+              alt="Technical Architecture Diagram"
+              style={{
+                maxWidth: '100%',
+                maxHeight: '90vh',
+                width: 'auto',
+                height: 'auto',
+                objectFit: 'contain',
+                boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const photos = useMemo(
     () =>
@@ -390,7 +475,7 @@ function App() {
   const [decayLevels, setDecayLevels] = useState<Record<string, 0 | 1 | 2 | 3>>({});
   const [manualMode, setManualMode] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'landing' | 'overview' | 'detail' | 'homepage'>('landing');
+  const [viewMode, setViewMode] = useState<'landing' | 'overview' | 'detail' | 'homepage' | 'tech'>('landing');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailEntryNonce, setDetailEntryNonce] = useState(0);
 
@@ -578,13 +663,10 @@ function App() {
                 <button
                   type="button"
                   onClick={() => {
-                    if (item === 'Homepage') {
-                      setViewMode('homepage');
-                      setIsMenuOpen(false);
-                    } else if (item === 'Gallery') {
-                      setViewMode('overview');
-                      setIsMenuOpen(false);
-                    }
+                    if (item === 'Homepage') setViewMode('homepage');
+                    if (item === 'Gallery') setViewMode('overview');
+                    if (item === 'Technical Development') setViewMode('tech');
+                    setIsMenuOpen(false);
                   }}
                   className="text-left text-2xl font-bold tracking-tight text-black/85 transition-colors duration-300 hover:text-black"
                 >
@@ -673,6 +755,19 @@ function App() {
                       transition={{ duration: 0.4 }}
                     >
                       <HomepageContent />
+                    </motion.div>
+                  )}
+                  {viewMode === 'tech' && (
+                    <motion.div
+                      key="tech"
+                      className="w-full h-full overflow-y-auto bg-white"
+                      style={{ gridArea: '1 / 1 / 2 / 2', zIndex: 20 }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.4 }}
+                    >
+                      <TechnicalDevelopmentContent />
                     </motion.div>
                   )}
                   {viewMode === 'detail' && (
