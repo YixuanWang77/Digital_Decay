@@ -653,7 +653,7 @@ function App() {
     setDetailEntryNonce((prev) => prev + 1);
   };
 
-  const navItems = ['Homepage', 'Gallery', 'Concept / Narrative', 'Art & Production', 'Technical Development', 'About'];
+  const navItems = ['Homepage', 'Gallery', 'Concept / Narrative', 'Art', 'Technical Development', 'About'];
 
   return (
     <div className="min-h-screen bg-white text-black overflow-x-hidden">
@@ -718,7 +718,7 @@ function App() {
                     if (item === 'Homepage') setViewMode('homepage');
                     if (item === 'Gallery') setViewMode('overview');
                     if (item === 'Technical Development') setViewMode('tech');
-                    if (item === 'Art & Production') setViewMode('art');
+                    if (item === 'Art') setViewMode('art');
                     setIsMenuOpen(false);
                   }}
                   className="text-left text-2xl font-bold tracking-tight text-black/85 transition-colors duration-300 hover:text-black"
