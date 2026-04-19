@@ -789,7 +789,7 @@ function App() {
                   onClick={() => {
                     if (item === 'Homepage') setViewMode('homepage');
                     if (item === 'Gallery') setViewMode('overview');
-                    if (item === 'Concept / Narrative') setViewMode('concept');
+                    if (item === 'Concept') setViewMode('concept');
                     if (item === 'Technical Development') setViewMode('tech');
                     if (item === 'Art') setViewMode('art');
                     setIsMenuOpen(false);
