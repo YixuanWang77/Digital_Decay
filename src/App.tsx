@@ -4,6 +4,7 @@ import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import landingVideo from '../Sources/Animations.mp4';
+import demoVideo from '../Sources/Demo.mp4';
 
 import { CoverFlowCarousel } from './components/CoverFlowCarousel';
 import { OverviewList } from './components/OverviewList';
@@ -237,6 +238,142 @@ function LandingSequence({ onComplete }: { onComplete: () => void }) {
   );
 }
 
+function HomepageContent() {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (isPlaying) {
+      void videoRef.current?.play();
+    }
+  }, [isPlaying]);
+
+  return (
+    <div className="min-h-screen w-full bg-white text-left">
+      {/* ⚠️ 终极防弹布局：彻底抛弃 Tailwind 的左右排版，使用原生 Flex 强制并排 */}
+      <div style={{ display: 'flex', flexDirection: 'row', width: '100%', minHeight: '100vh' }}>
+        {/* 左侧文字区：强制设定为 55% 宽度 */}
+        <div
+          style={{
+            width: '55%',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            padding: '4rem 5rem',
+            borderRight: '1px solid #f5f5f5',
+            boxSizing: 'border-box',
+          }}
+        >
+          <h2 style={{ fontSize: '3.5vw', fontWeight: 'bold', lineHeight: 1.1, marginBottom: '6rem', color: '#000' }}>
+            Digital Decay is an interactive webpage that uses real-time facial recognition technology to decay images on the webpage as browsing becomes more familiar, thereby visualizing the unreliability of digital memories.
+          </h2>
+
+          <div
+            style={{
+              maxWidth: '600px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '2rem',
+              fontSize: '1.125rem',
+              color: 'rgba(0,0,0,0.8)',
+              lineHeight: 1.6,
+            }}
+          >
+            <p>
+              This interactive online archive is like a living, decaying ecosystem. Powered by a Python backend integrated with real-time facial tracking technology; it monitors the presence of viewers. This physical data dynamically drives a custom WebGL and p5.js frontend, triggering gradual visual degradation on the images, such as distortion, blurring, and pixelation. The more people view the images in an archive at the same time, the faster the data "rots".
+            </p>
+            <p>
+              By transforming passive viewing into an active catalyst for decay, this project forces us to confront the fragility of our own digital footprints and the inevitable decay of the memories we upload to the cloud.
+            </p>
+          </div>
+        </div>
+
+        {/* 右侧视频区：强制设定为 45% 宽度 */}
+        <div
+          style={{
+            width: '45%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#fafafa',
+            padding: '4rem',
+            boxSizing: 'border-box',
+          }}
+        >
+          <div style={{ width: '100%', maxWidth: '600px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div
+              className="group"
+              onClick={() => setIsPlaying(true)}
+              style={{
+                position: 'relative',
+                width: '100%',
+                aspectRatio: '16/9',
+                cursor: 'pointer',
+                overflow: 'hidden',
+                backgroundColor: '#000',
+                boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+              }}
+            >
+              <video
+                ref={videoRef}
+                src={demoVideo}
+                loop
+                muted
+                playsInline
+                style={{ height: '100%', width: '100%', objectFit: 'cover', opacity: isPlaying ? 1 : 0.4, transition: 'opacity 0.5s' }}
+              />
+
+              {/* 磨砂黑纱与播放按钮 */}
+              {!isPlaying && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: 'rgba(0,0,0,0.25)',
+                    backdropFilter: 'blur(8px)',
+                  }}
+                >
+                  <span
+                    style={{
+                      color: 'white',
+                      fontSize: '1.5rem',
+                      fontWeight: 'bold',
+                      letterSpacing: '0.2em',
+                      border: '2px solid rgba(255,255,255,0.4)',
+                      padding: '0.75rem 1.5rem',
+                      transition: 'transform 0.3s',
+                    }}
+                    className="group-hover:scale-105"
+                  >
+                    PLAY DEMO
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <p
+              style={{
+                fontSize: '0.75rem',
+                color: '#a3a3a3',
+                fontFamily: 'monospace',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                marginTop: '0.5rem',
+              }}
+            >
+              * Note: Live webcam tracking is restricted to local execution.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const photos = useMemo(
     () =>
@@ -253,7 +390,7 @@ function App() {
   const [decayLevels, setDecayLevels] = useState<Record<string, 0 | 1 | 2 | 3>>({});
   const [manualMode, setManualMode] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'landing' | 'overview' | 'detail'>('landing');
+  const [viewMode, setViewMode] = useState<'landing' | 'overview' | 'detail' | 'homepage'>('landing');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailEntryNonce, setDetailEntryNonce] = useState(0);
 
@@ -379,13 +516,13 @@ function App() {
     setDetailEntryNonce((prev) => prev + 1);
   };
 
-  const navItems = ['Gallery (Homepage)', 'Concept / Narrative', 'Art & Production', 'Technical Development', 'About'];
+  const navItems = ['Homepage', 'Gallery', 'Concept / Narrative', 'Art & Production', 'Technical Development', 'About'];
 
   return (
     <div className="min-h-screen bg-white text-black overflow-x-hidden">
       {viewMode === 'landing' && <LandingSequence onComplete={() => setViewMode('overview')} />}
       <div className="relative min-h-screen">
-        
+
         {/* 1. Fixed Sidebar (Pure inline styles to guarantee width/position) */}
         <aside style={{
           position: 'fixed',
@@ -440,6 +577,15 @@ function App() {
               <li key={item}>
                 <button
                   type="button"
+                  onClick={() => {
+                    if (item === 'Homepage') {
+                      setViewMode('homepage');
+                      setIsMenuOpen(false);
+                    } else if (item === 'Gallery') {
+                      setViewMode('overview');
+                      setIsMenuOpen(false);
+                    }
+                  }}
                   className="text-left text-2xl font-bold tracking-tight text-black/85 transition-colors duration-300 hover:text-black"
                 >
                   {item}
@@ -514,6 +660,19 @@ function App() {
                         selectedId={selectedId}
                         onSelect={handleSelectOverviewItem}
                       />
+                    </motion.div>
+                  )}
+                  {viewMode === 'homepage' && (
+                    <motion.div
+                      key="homepage"
+                      className="w-full h-full overflow-y-auto bg-white"
+                      style={{ gridArea: '1 / 1 / 2 / 2', zIndex: 20 }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.4 }}
+                    >
+                      <HomepageContent />
                     </motion.div>
                   )}
                   {viewMode === 'detail' && (
@@ -617,9 +776,8 @@ function App() {
                                   : 'Auto camera mode: decay is irreversible (eye)'
                               }
                               onClick={() => setManualMode((v) => !v)}
-                              className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center transition-colors hover:bg-black hover:text-white ${
-                                manualMode ? 'bg-white' : 'bg-neutral-200'
-                              }`}
+                              className={`w-12 h-12 shrink-0 border-2 border-black flex items-center justify-center transition-colors hover:bg-black hover:text-white ${manualMode ? 'bg-white' : 'bg-neutral-200'
+                                }`}
                             >
                               {manualMode ? (
                                 <IconCursorManual className="w-6 h-6" />
@@ -630,7 +788,7 @@ function App() {
                           </div>
                         </motion.div>
                       </div>
-                  </motion.div>
+                    </motion.div>
                   )}
                 </AnimatePresence>
               </div>
