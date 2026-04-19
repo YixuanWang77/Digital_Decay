@@ -10,6 +10,7 @@ import artOverview from '../Sources/Deterioration Overview List.png';
 import level1 from '../Sources/Deterioration Level 1.png';
 import level2 from '../Sources/Deterioration Level 2.png';
 import level3 from '../Sources/Deterioration Level 3.png';
+import sabatoVisconti from '../Sources/Sabato_Visconti.png';
 
 import { CoverFlowCarousel } from './components/CoverFlowCarousel';
 import { OverviewList } from './components/OverviewList';
@@ -269,7 +270,7 @@ function HomepageContent() {
             boxSizing: 'border-box',
           }}
         >
-          <h2 style={{ fontSize: '2vw', fontWeight: 'bold', lineHeight: 1.15, marginBottom: '3rem', color: '#000' }}>
+          <h2 style={{ fontSize: '1.25vw', fontWeight: 'bold', lineHeight: 1.15, marginBottom: '3rem', color: '#000' }}>
             Digital Decay is an interactive webpage that uses real-time facial recognition technology to decay images on the webpage as browsing becomes more familiar, thereby visualizing the unreliability of digital memories.
           </h2>
 
@@ -511,6 +512,77 @@ function ArtProductionContent() {
   );
 }
 
+function ConceptNarrativeContent() {
+  return (
+    <div className="min-h-screen w-full bg-white text-left">
+      <div style={{ display: 'flex', flexDirection: 'row', width: '100%', minHeight: '100vh' }}>
+        {/* Left Column: Conceptual Text (40%) */}
+        <div
+          style={{
+            width: '40%',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            padding: '4rem 4rem',
+            borderRight: '1px solid #f5f5f5',
+            boxSizing: 'border-box',
+          }}
+        >
+          <h2 style={{ fontSize: '2vw', fontWeight: 'bold', lineHeight: 1.15, marginBottom: '3rem', color: '#000' }}>
+            Conceptual Origins & Inspiration
+          </h2>
+          <div style={{ maxWidth: '600px', display: 'flex', flexDirection: 'column', gap: '2rem', fontSize: '1.125rem', color: 'rgba(0,0,0,0.8)', lineHeight: 1.6 }}>
+            <p>
+              The core interaction model of Digital Decay addresses the passive accumulation of unscreened digital files. Rather than presenting a speculative narrative, the project mechanically visualizes data rot by actively degrading image pixels based on audience presence.
+            </p>
+            <p>
+              The specific visual execution of this deterioration is directly informed by the glitch photography of Sabato Visconti. By manually manipulating hexadecimal code and writing zeros into image files, Visconti exposed the fragile, mathematical reality hiding beneath smooth digital interfaces.
+            </p>
+            <p>
+              Building upon Visconti's manual interventions, this project automates the destruction process. It shifts the trigger from manual code-editing to passive human observation, establishing a direct feedback loop between physical presence and digital degradation.
+            </p>
+          </div>
+        </div>
+
+        {/* Right Column: Inspiration Image (60%) */}
+        <div
+          style={{
+            width: '60%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#fafafa',
+            padding: '2rem',
+            boxSizing: 'border-box',
+          }}
+        >
+          <div style={{ width: '100%', maxWidth: '900px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <img
+              src={sabatoVisconti}
+              alt="Glitch photography by Sabato Visconti"
+              style={{ width: '100%', height: 'auto', maxHeight: '80vh', objectFit: 'contain', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}
+            />
+            <p
+              style={{
+                fontSize: '0.75rem',
+                color: '#a3a3a3',
+                fontFamily: 'monospace',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                marginTop: '0.5rem',
+                textAlign: 'center',
+              }}
+            >
+              * INSPIRATION: GLITCH PHOTOGRAPHY BY SABATO VISCONTI
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const photos = useMemo(
     () =>
@@ -527,7 +599,7 @@ function App() {
   const [decayLevels, setDecayLevels] = useState<Record<string, 0 | 1 | 2 | 3>>({});
   const [manualMode, setManualMode] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'landing' | 'overview' | 'detail' | 'homepage' | 'tech' | 'art'>('landing');
+  const [viewMode, setViewMode] = useState<'landing' | 'overview' | 'detail' | 'homepage' | 'tech' | 'art' | 'concept'>('landing');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailEntryNonce, setDetailEntryNonce] = useState(0);
 
@@ -653,7 +725,7 @@ function App() {
     setDetailEntryNonce((prev) => prev + 1);
   };
 
-  const navItems = ['Homepage', 'Gallery', 'Concept / Narrative', 'Art', 'Technical Development', 'About'];
+  const navItems = ['Homepage', 'Gallery', 'Concept', 'Art', 'Technical Development', 'About'];
 
   return (
     <div className="min-h-screen bg-white text-black overflow-x-hidden">
@@ -717,6 +789,7 @@ function App() {
                   onClick={() => {
                     if (item === 'Homepage') setViewMode('homepage');
                     if (item === 'Gallery') setViewMode('overview');
+                    if (item === 'Concept / Narrative') setViewMode('concept');
                     if (item === 'Technical Development') setViewMode('tech');
                     if (item === 'Art') setViewMode('art');
                     setIsMenuOpen(false);
@@ -834,6 +907,19 @@ function App() {
                       transition={{ duration: 0.4 }}
                     >
                       <ArtProductionContent />
+                    </motion.div>
+                  )}
+                  {viewMode === 'concept' && (
+                    <motion.div
+                      key="concept"
+                      className="w-full h-full overflow-y-auto bg-white"
+                      style={{ gridArea: '1 / 1 / 2 / 2', zIndex: 20 }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.4 }}
+                    >
+                      <ConceptNarrativeContent />
                     </motion.div>
                   )}
                   {viewMode === 'detail' && (
