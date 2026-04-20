@@ -119,6 +119,21 @@ export function OverviewList({
           })}
         </motion.div>
       </AnimatePresence>
+      <div
+        style={{
+          position: 'fixed',
+          bottom: '1.5rem',
+          right: '2rem',
+          zIndex: 50,
+          fontSize: '0.75rem',
+          color: 'rgba(0,0,0,0.4)',
+          letterSpacing: '0.05em',
+          pointerEvents: 'none',
+          fontFamily: 'system-ui, sans-serif',
+        }}
+      >
+        All photographs displayed in this archive are original works captured by the artist.
+      </div>
     </div>
   );
 }

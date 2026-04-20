@@ -10,6 +10,8 @@ import artOverview from '../Sources/Deterioration Overview List.png';
 import level1 from '../Sources/Deterioration Level 1.png';
 import level2 from '../Sources/Deterioration Level 2.png';
 import level3 from '../Sources/Deterioration Level 3.png';
+import statePreservationImg from '../Sources/State_Preservation.png';
+import rgbSplitImg from '../Sources/RGB_Split.png';
 import sabatoVisconti from '../Sources/Sabato_Visconti.png';
 
 import { CoverFlowCarousel } from './components/CoverFlowCarousel';
@@ -499,9 +501,9 @@ function TechnicalDevelopmentContent() {
 
 function ArtProductionContent() {
   return (
-    <div className="min-h-screen w-full bg-white text-left px-20 py-24">
+    <div className="min-h-screen w-full bg-white text-left px-20 pt-24 pb-32">
       {/* Top Section: Explanation (40/60 Split) */}
-      <div style={{ display: 'flex', flexDirection: 'row', width: '100%', marginBottom: '8rem', alignItems: 'center' }}>
+      <div style={{ display: 'flex', flexDirection: 'row', width: '100%', marginBottom: '6rem', alignItems: 'center' }}>
         <div style={{ width: '40%', paddingRight: '5rem', boxSizing: 'border-box' }}>
           <h2 style={{ fontSize: '2vw', fontWeight: 'bold', lineHeight: 1.15, marginBottom: '2.5rem', color: '#000' }}>
             Visual Degradation & State Preservation
@@ -520,8 +522,8 @@ function ArtProductionContent() {
         </div>
       </div>
 
-      {/* Bottom Section: Three-Column Comparison (Full Width) */}
-      <div style={{ width: '100%', borderTop: '1px solid #f5f5f5', paddingTop: '6rem' }}>
+      {/* Middle Section: Three-Column Comparison (Full Width) */}
+      <div style={{ width: '100%', borderTop: '1px solid #f5f5f5', paddingTop: '6rem', marginBottom: '6rem' }}>
         <div style={{ display: 'flex', flexDirection: 'row', gap: '2rem', width: '100%' }}>
           {[
             { img: level1, label: 'Level 1: Minor Decay' },
@@ -540,6 +542,41 @@ function ArtProductionContent() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Bottom Section: Code Proofs (50/50 Split) */}
+      <div style={{ display: 'flex', flexDirection: 'row', gap: '4rem', width: '100%', borderTop: '1px solid #f5f5f5', paddingTop: '6rem' }}>
+        
+        {/* Snippet 1: State Preservation (Selected Option A) */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#000', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Implementation: Global State Memory
+          </h3>
+          <img
+            src={statePreservationImg}
+            alt="State preservation memory mapping code"
+            style={{ width: '100%', height: 'auto', borderRadius: '8px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)', backgroundColor: '#1e1e1e' }}
+          />
+          <p style={{ fontSize: '1rem', color: 'rgba(0,0,0,0.8)', lineHeight: 1.6 }}>
+            By utilizing a global memory map, the system captures and restores precise WebGL rendering variables across React component lifecycles, ensuring the exact decay state is frozen even when navigating between the gallery and detail views.
+          </p>
+        </div>
+
+        {/* Snippet 2: RGB Split */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#000', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Implementation: Chromatic Aberration
+          </h3>
+          <img
+            src={rgbSplitImg}
+            alt="RGB channel splitting code"
+            style={{ width: '100%', height: 'auto', borderRadius: '8px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)', backgroundColor: '#1e1e1e' }}
+          />
+          <p style={{ fontSize: '1rem', color: 'rgba(0,0,0,0.8)', lineHeight: 1.6 }}>
+            The color stripping effect is achieved by rendering the image buffer three times using screen blending. The algorithm dynamically offsets the isolated Red, Green, and Blue channels based on the current decay severity.
+          </p>
+        </div>
+
       </div>
     </div>
   );
