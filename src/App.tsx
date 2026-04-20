@@ -360,7 +360,7 @@ function HomepageContent() {
                 loop
                 muted
                 playsInline
-                style={{ height: '100%', width: '100%', objectFit: 'cover', opacity: isPlaying ? 1 : 0.4, transition: 'opacity 0.5s' }}
+                style={{ height: '100%', width: '100%', objectFit: 'cover', objectPosition: 'center bottom', opacity: isPlaying ? 1 : 0.4, transition: 'opacity 0.5s' }}
               />
 
               {/* 磨砂黑纱与播放按钮 */}
