@@ -413,18 +413,21 @@ function HomepageContent() {
 
 function TechnicalDevelopmentContent() {
   return (
-    <div className="min-h-screen w-full bg-white text-left">
-      <div style={{ display: 'flex', flexDirection: 'row', width: '100%', minHeight: '100vh' }}>
+    // Outermost container is 'h-screen' and 'overflow-hidden'
+    <div className="h-screen w-full bg-white text-left overflow-hidden">
+      <div style={{ display: 'flex', flexDirection: 'row', width: '100%', height: '100%' }}>
+        
         {/* Left Column: Technical Text (40%) */}
         <div
           style={{
             width: '40%',
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'center',
+            justifyContent: 'center', // Centers text vertically
             padding: '4rem 5rem',
             borderRight: '1px solid #f5f5f5',
             boxSizing: 'border-box',
+            overflowY: 'auto', // Independent scrolling for text
           }}
         >
           <h2 style={{ fontSize: '2vw', fontWeight: 'bold', lineHeight: 1.15, marginBottom: '3rem', color: '#000' }}>
@@ -468,28 +471,29 @@ function TechnicalDevelopmentContent() {
             width: '60%',
             display: 'flex',
             flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
+            alignItems: 'center', // Horizontal centering
             backgroundColor: '#fafafa',
             padding: '2rem',
             boxSizing: 'border-box',
+            height: '100%',
           }}
         >
-          <div style={{ width: '100%', maxWidth: 'none', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <img
-              src={techDiagram}
-              alt="Technical Architecture Diagram"
-              style={{
-                maxWidth: '100%',
-                maxHeight: '90vh',
-                width: 'auto',
-                height: 'auto',
-                objectFit: 'contain',
-                boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-              }}
-            />
-          </div>
+          {/* Simplified nesting and added marginTop to push the image down */}
+          <img
+            src={techDiagram}
+            alt="Technical Architecture Diagram"
+            style={{
+              maxWidth: '100%',
+              maxHeight: '100%',
+              width: 'auto',
+              height: 'auto',
+              objectFit: 'contain', // Prevents distortion
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+              marginTop: '4rem', // <-- Force the top to align with the text content
+            }}
+          />
         </div>
+        
       </div>
     </div>
   );
