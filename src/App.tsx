@@ -291,6 +291,37 @@ function HomepageContent() {
             <p>
               By transforming passive viewing into an active catalyst for decay, this project forces us to confront the fragility of our own digital footprints and the inevitable decay of the memories we upload to the cloud.
             </p>
+            <div style={{ marginTop: '4rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <h3 style={{ fontSize: '0.75rem', fontWeight: 'bold', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#000', marginBottom: '0.5rem' }}>
+                Project Links
+              </h3>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', fontSize: '0.875rem' }}>
+                <a
+                  href="https://github.com/YixuanWang77/Digital_Decay"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#000', textDecoration: 'underline', textUnderlineOffset: '4px', transition: 'opacity 0.2s' }}
+                >
+                  GitHub Repository
+                </a>
+                <a
+                  href="https://digitaldecay-ocadu.vercel.app"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#000', textDecoration: 'underline', textUnderlineOffset: '4px', transition: 'opacity 0.2s' }}
+                >
+                  Live Deployment
+                </a>
+                <a
+                  href="https://youtu.be/kRQZf_ZHAp0"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#000', textDecoration: 'underline', textUnderlineOffset: '4px', transition: 'opacity 0.2s' }}
+                >
+                  Video Demo
+                </a>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -583,6 +614,88 @@ function ConceptNarrativeContent() {
   );
 }
 
+function AboutContent() {
+  return (
+    <div className="min-h-screen w-full bg-white text-left">
+      <div style={{ display: 'flex', flexDirection: 'row', width: '100%', minHeight: '100vh' }}>
+        {/* Left Column: Bio & Info (40%) */}
+        <div
+          style={{
+            width: '40%',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            padding: '4rem 5rem',
+            borderRight: '1px solid #f5f5f5',
+            boxSizing: 'border-box',
+          }}
+        >
+          <h2 style={{ fontSize: '2vw', fontWeight: 'bold', lineHeight: 1.15, marginBottom: '3rem', color: '#000' }}>
+            About the Creator
+          </h2>
+
+          <div style={{ maxWidth: '600px', display: 'flex', flexDirection: 'column', gap: '2.5rem', fontSize: '1.125rem', color: 'rgba(0,0,0,0.8)', lineHeight: 1.6 }}>
+            <div>
+              <p style={{ marginBottom: '1rem' }}>
+                <strong>Yixuan Wang </strong> is a 3rd-year undergraduate student in the <strong>Digital Futures</strong> program at <strong>OCAD University</strong>.
+              </p>
+              <p>
+              Inspired by digital art, my work combines front-end interaction design with back-end programming to build visual, interactive experiences.
+              </p>
+            </div>
+
+            <div>
+              <h3 style={{ fontSize: '0.875rem', fontWeight: 'bold', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#000', marginBottom: '1rem' }}>
+                AI Agents & Tools
+              </h3>
+              <p style={{ fontSize: '1rem', color: '#666' }}>
+                Cursor (Coding), Google Gemini (Conceptual Logic), Figma (UI/UX Design).
+              </p>
+            </div>
+
+            <div>
+              <h3 style={{ fontSize: '0.875rem', fontWeight: 'bold', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#000', marginBottom: '1rem' }}>
+                Connect
+              </h3>
+              <a
+                href="https://www.linkedin.com/in/yixuan-wang-b02958160"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: '#000', textDecoration: 'underline', textUnderlineOffset: '4px' }}
+              >
+                LinkedIn Profile
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Visual Branding (60%) */}
+        <div
+          style={{
+            width: '60%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#fafafa',
+            padding: '4rem',
+            boxSizing: 'border-box',
+          }}
+        >
+          <div style={{ textAlign: 'center' }}>
+            <h1 style={{ fontSize: '8vw', fontWeight: '900', color: '#eeeeee', letterSpacing: '-0.05em', margin: 0 }}>
+              YIXUAN
+            </h1>
+            <p style={{ fontSize: '0.75rem', color: '#a3a3a3', fontFamily: 'monospace', letterSpacing: '0.3em', textTransform: 'uppercase' }}>
+              Digital Futures @ OCADU
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const photos = useMemo(
     () =>
@@ -599,7 +712,7 @@ function App() {
   const [decayLevels, setDecayLevels] = useState<Record<string, 0 | 1 | 2 | 3>>({});
   const [manualMode, setManualMode] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'landing' | 'overview' | 'detail' | 'homepage' | 'tech' | 'art' | 'concept'>('landing');
+  const [viewMode, setViewMode] = useState<'landing' | 'overview' | 'detail' | 'homepage' | 'tech' | 'art' | 'concept' | 'about'>('landing');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailEntryNonce, setDetailEntryNonce] = useState(0);
 
@@ -781,7 +894,7 @@ function App() {
           }}
           aria-hidden={!isMenuOpen}
         >
-          <ul className="flex h-full flex-col justify-center gap-7">
+          <ul className="flex h-full flex-col justify-center items-start gap-9">
             {navItems.map((item) => (
               <li key={item}>
                 <button
@@ -792,9 +905,10 @@ function App() {
                     if (item === 'Concept') setViewMode('concept');
                     if (item === 'Technical Development') setViewMode('tech');
                     if (item === 'Art') setViewMode('art');
+                    if (item === 'About') setViewMode('about');
                     setIsMenuOpen(false);
                   }}
-                  className="text-left text-2xl font-bold tracking-tight text-black/85 transition-colors duration-300 hover:text-black"
+                  className="text-left text-2xl font-bold tracking-tight text-black/85 transition-colors duration-300 hover:text-black py-1"
                 >
                   {item}
                 </button>
@@ -920,6 +1034,19 @@ function App() {
                       transition={{ duration: 0.4 }}
                     >
                       <ConceptNarrativeContent />
+                    </motion.div>
+                  )}
+                  {viewMode === 'about' && (
+                    <motion.div
+                      key="about"
+                      className="w-full h-full overflow-y-auto bg-white"
+                      style={{ gridArea: '1 / 1 / 2 / 2', zIndex: 20 }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.4 }}
+                    >
+                      <AboutContent />
                     </motion.div>
                   )}
                   {viewMode === 'detail' && (
