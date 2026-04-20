@@ -413,24 +413,23 @@ function HomepageContent() {
 
 function TechnicalDevelopmentContent() {
   return (
-    // Outermost container is 'h-screen' and 'overflow-hidden'
-    <div className="h-screen w-full bg-white text-left overflow-hidden">
+    <div style={{ height: '100vh', width: '100%', backgroundColor: 'white', overflow: 'hidden' }}>
       <div style={{ display: 'flex', flexDirection: 'row', width: '100%', height: '100%' }}>
-        
         {/* Left Column: Technical Text (40%) */}
         <div
           style={{
             width: '40%',
+            height: '100%',
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'center', // Centers text vertically
-            padding: '4rem 5rem',
+            justifyContent: 'center',
+            padding: '2rem 5rem',
             borderRight: '1px solid #f5f5f5',
             boxSizing: 'border-box',
-            overflowY: 'auto', // Independent scrolling for text
+            overflowY: 'auto',
           }}
         >
-          <h2 style={{ fontSize: '2vw', fontWeight: 'bold', lineHeight: 1.15, marginBottom: '3rem', color: '#000' }}>
+          <h2 style={{ fontSize: '2vw', fontWeight: 'bold', lineHeight: 1.15, marginBottom: '1.5rem', color: '#000' }}>
             System Architecture & Interaction Modes
           </h2>
 
@@ -439,7 +438,7 @@ function TechnicalDevelopmentContent() {
               maxWidth: '600px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '2rem',
+              gap: '1.5rem',
               fontSize: '1.125rem',
               color: 'rgba(0,0,0,0.8)',
               lineHeight: 1.6,
@@ -469,31 +468,30 @@ function TechnicalDevelopmentContent() {
         <div
           style={{
             width: '60%',
+            height: '100%',
             display: 'flex',
             flexDirection: 'column',
-            alignItems: 'center', // Horizontal centering
+            alignItems: 'center',
+            justifyContent: 'center',
             backgroundColor: '#fafafa',
             padding: '2rem',
             boxSizing: 'border-box',
-            height: '100%',
+            overflow: 'hidden',
           }}
         >
-          {/* Simplified nesting and added marginTop to push the image down */}
           <img
             src={techDiagram}
             alt="Technical Architecture Diagram"
             style={{
               maxWidth: '100%',
-              maxHeight: '100%',
+              maxHeight: '80vh',
               width: 'auto',
               height: 'auto',
-              objectFit: 'contain', // Prevents distortion
+              objectFit: 'contain',
               boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-              marginTop: '4rem', // <-- Force the top to align with the text content
             }}
           />
         </div>
-        
       </div>
     </div>
   );
